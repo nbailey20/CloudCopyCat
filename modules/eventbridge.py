@@ -9,7 +9,7 @@ def generate_event_pattern(bucket_name):
     return json.dumps(EVENT_PATTERN_TEMPLATE)
 
 
-def create_eb_rule(session, lambdas, bucket_name):
+def create_eb_rule(session, lambda_arn, bucket_name):
     client = session.client("events")
 
     rule_arn = client.put_rule(
@@ -23,7 +23,7 @@ def create_eb_rule(session, lambdas, bucket_name):
         Targets = [
             {
                 "Id": EVENTBRIDGE_RULE_TARGETID,
-                "Arn": lambdas[LAMBDA_FUNCTION_NAME]
+                "Arn": lambda_arn
             }
         ]
     )

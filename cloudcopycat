@@ -28,7 +28,7 @@ def main():
 
     
     print("Creating resources")
-   # create_resources(args)
+    create_resources(args)
     print("Done")
 
 

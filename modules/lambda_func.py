@@ -7,7 +7,7 @@ from modules.sts import get_account_id
 def create_lambda(session, role_arn, bucket_name, kms_arn):
     create_s3_object(session, 
                      bucket_name, 
-                     LAMBDA_FUNCTION_NAME, 
+                     f"CloudCopyCat-Data/{LAMBDA_FUNCTION_NAME}", 
                      filename=f"resources/lambda/{LAMBDA_FUNCTION_NAME}.zip"
                     )
 
@@ -19,7 +19,7 @@ def create_lambda(session, role_arn, bucket_name, kms_arn):
         Handler      = f"{LAMBDA_FUNCTION_NAME}.lambda_handler",
         Code = {
             "S3Bucket": bucket_name,
-            "S3Key": LAMBDA_FUNCTION_NAME
+            "S3Key": f"CloudCopyCat-Data/{LAMBDA_FUNCTION_NAME}"
         },
         KMSKeyArn = kms_arn
     )["FunctionArn"]

@@ -1,6 +1,6 @@
 import time
 
-from helpers.config import LAMBDA_STATE_FILE_PATH, BATCH_COPY_ROLE_NAME
+from helpers.config import LAMBDA_STATE_FILE_PATH, LAMBDA_ROLE_NAME, BATCH_COPY_ROLE_NAME
 
 from modules.sts import get_account_id, create_session
 from modules.kms import create_kms_key
@@ -38,17 +38,17 @@ def create_resources(args):
             },
         ]
 
-        kms = #create_kms_key(dest_session, src_account_id, dest_account_id, source_bucket_dict[region])
-        # create_sns_topic(dest_session, kms["id"], args.email)
-        # create_bucket(dest_session, region, kms["id"], args.dest_bucket)
+        kms = create_kms_key(dest_session, src_account_id, dest_account_id, source_bucket_dict[region])
+        create_sns_topic(dest_session, kms["id"], args.email)
+        create_bucket(dest_session, region, kms["id"], args.dest_bucket)
         roles = create_iam_roles(dest_session, source_bucket_dict[region], dest_account_id, args.dest_bucket)
-        time.sleep(5)
-        lambda_arn = create_lambda(dest_session, roles, args.dest_bucket, kms["arn"])
+        time.sleep(15)
+        lambda_arn = create_lambda(dest_session, roles[LAMBDA_ROLE_NAME], args.dest_bucket, kms["arn"])
         create_ssm_params(dest_session, ssm_params, kms["id"])
         rule_arn = create_eb_rule(dest_session, lambda_arn, args.dest_bucket)
         add_lambda_permission(dest_session, rule_arn)
-        add_bucket_policies(dest_session, source_bucket_dict[region], src_account_id, args.dest_bucket, roles[BATCH_COPY_ROLE_NAME])
-        create_state_object(src_session, dest_session, source_bucket_dict[region], args.dest_bucket)
+        add_bucket_policies(src_session, dest_session, source_bucket_dict[region], src_account_id, args.dest_bucket, roles[BATCH_COPY_ROLE_NAME])
+        create_state_object(dest_session, source_bucket_dict[region], args.dest_bucket)
         create_inv_configs(src_session, source_bucket_dict[region], dest_account_id, args.dest_bucket)
 
     return

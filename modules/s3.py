@@ -1,5 +1,8 @@
 import json
 
+from botocore.exceptions import ClientError
+
+from helpers.config import BATCH_COPY_ROLE_NAME
 from modules.sts import get_account_id
 
 
@@ -82,9 +85,13 @@ def create_bucket(session, region, kms_id, bucket_name):
 
 def get_bucket_policy(session, bucket_name):
     client = session.client("s3")
-    policy = json.loads(client.get_bucket_policy(
-        Bucket = bucket_name
-    )["Policy"])
+    try:
+        policy = json.loads(client.get_bucket_policy(
+            Bucket = bucket_name
+        )["Policy"])
+    except ClientError as err:
+        print(err)
+        policy = {"Version": "2012-10-17", "Statement": []}
     return policy
 
 
@@ -105,6 +112,7 @@ def generate_src_bucket_policies(session, src_buckets, batch_role_arn):
             SOURCE_BUCKET_POLICY_TEMPLATE
         )
         policies.append(json.dumps(policy))
+    print(policies)
     return policies
 
 
@@ -126,6 +134,7 @@ def add_bucket_policies(src_session, dest_session, src_buckets, src_account_id, 
         Bucket = dest_bucket_name,
         Policy = dest_bucket_policy
     )
+    print("Added dest bucket policy")
 
     src_bucket_policies = generate_src_bucket_policies(src_session, src_buckets, batch_role_arn)
     client = src_session.client("s3")
@@ -134,6 +143,7 @@ def add_bucket_policies(src_session, dest_session, src_buckets, src_account_id, 
             Bucket = bucket,
             Policy = src_bucket_policies[idx]
         )
+    print("Updated source bucket policies")
     return
 
 
@@ -142,13 +152,13 @@ def create_s3_object(session, bucket_name, key, filename=None, data=None):
     if filename:
         client.upload_file(
             Bucket   = bucket_name,
-            Filename = f"resources/lambda/{filename}",
+            Filename = filename,
             Key      = key
         )
     
     elif data:
         client.put_object(
-            Body   = bytes(json.dumps(data)),
+            Body   = bytes(json.dumps(data), encoding="utf-8"),
             Bucket = bucket_name,
             Key    = key
         )
@@ -156,11 +166,11 @@ def create_s3_object(session, bucket_name, key, filename=None, data=None):
 
 
 def create_state_object(session, src_buckets, dest_bucket_name):
-    from helpers.config import LAMBDA_STATE_FILE_NAME
+    from helpers.config import LAMBDA_STATE_FILE_PATH
     from resources.s3.dest_bucket import STATE_FILE_SCHEMA as state
 
     state["awaiting_inv_report"] = src_buckets
-    create_s3_object(session, dest_bucket_name, LAMBDA_STATE_FILE_NAME, data=state)
+    create_s3_object(session, dest_bucket_name, LAMBDA_STATE_FILE_PATH, data=state)
     return
 
 
