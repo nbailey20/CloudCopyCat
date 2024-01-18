@@ -1,0 +1,37 @@
+#!/usr/bin/python3
+
+import zipfile, os
+
+from helpers.cl_input import parse_args
+from helpers.setup import create_resources
+from helpers.remove import delete_resources
+
+def build_zips():
+    cwd = os.getcwd()
+    os.chdir(os.path.join(cwd, "resources", "lambda"))
+    with zipfile.ZipFile("CloudCopyCat-Lambda-Function.zip", "w") as z:
+        z.write("CloudCopyCat-Lambda-Function.py")
+    os.chdir(cwd)
+    return
+
+
+def main():
+    args = parse_args()
+    if args.remove:
+        print("Deleting resources")
+        delete_resources(args)
+        print("Done")
+        return
+    
+    print("Building Lambda zips...")
+    build_zips()
+
+    
+    print("Creating resources")
+   # create_resources(args)
+    print("Done")
+
+
+
+if __name__ == "__main__":
+    main()
