@@ -36,7 +36,10 @@ LAMBDA_IAM_POLICY_TEMPLATE = {
         },
         {
             "Effect": "Allow",
-            "Action": "s3:GetObject",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject"
+            ],
             "Resource": "" ## filled in at deployment time
         }
     ]

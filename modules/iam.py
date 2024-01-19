@@ -1,6 +1,6 @@
 import json
 
-from helpers.config import LAMBDA_POLICY_NAME, LAMBDA_ROLE_NAME
+from helpers.config import LAMBDA_POLICY_NAME, LAMBDA_ROLE_NAME, LAMBDA_STATE_FILE_PATH
 from helpers.config import BATCH_COPY_POLICY_NAME, BATCH_COPY_ROLE_NAME
 
 from resources.iam.lambda_role import LAMBDA_IAM_POLICY_TEMPLATE, LAMBDA_TRUST_POLICY
@@ -14,7 +14,7 @@ def generate_lambda_policy(dest_account_id, dest_bucket_name):
     LAMBDA_IAM_POLICY_TEMPLATE["Statement"][1]["Resource"] = f"arn:aws:logs:*:{dest_account_id}:log-group:/aws/lambda*"
     LAMBDA_IAM_POLICY_TEMPLATE["Statement"][3]["Resource"] = f"arn:aws:iam::{dest_account_id}:role/{BATCH_COPY_ROLE_NAME}"
     LAMBDA_IAM_POLICY_TEMPLATE["Statement"][5]["Resource"] = f"arn:aws:ssm:*:{dest_account_id}:parameter/CloudCopyCat-*"
-    LAMBDA_IAM_POLICY_TEMPLATE["Statement"][6]["Resource"] = f"arn:aws:s3:::{dest_bucket_name}/CloudCopyCat-Data/*"
+    LAMBDA_IAM_POLICY_TEMPLATE["Statement"][6]["Resource"] = f"arn:aws:s3:::{dest_bucket_name}/{LAMBDA_STATE_FILE_PATH}"
     return json.dumps(LAMBDA_IAM_POLICY_TEMPLATE)
 
 

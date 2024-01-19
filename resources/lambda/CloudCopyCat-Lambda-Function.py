@@ -56,6 +56,16 @@ def read_state_file(bucket_name, object_path):
     return json.loads(state_obj["Body"].read().decode("utf-8"))
 
 
+def write_state_file(bucket_name, object_path, data):
+    client = boto3.client("s3")
+    client.put_object(
+        Body   = bytes(json.dumps(data), encoding="utf-8"),
+        Bucket = bucket_name,
+        Key    = object_path
+    )
+    return
+
+
 def get_ssm_param(param_name):
     client = boto3.client("ssm")
     param_val = client.get_parameter(
@@ -82,7 +92,8 @@ def lambda_handler(event, _):
         state["awaiting_batch_copy"].remove(src_bucket_name)
         ## TODO make sure all objects copied!
         state["completed"]["successful"].append(src_bucket_name)
-    
+        write_state_file(dest_bucket_name, state_path, state)
+
     elif manifest_type == "InvReport" and src_bucket_name in state["awaiting_inv_report"]:
         print(f"Creating batch copy for {src_bucket_name}")
         account_id     = event["account"]
@@ -92,7 +103,7 @@ def lambda_handler(event, _):
         batch_role_arn = get_ssm_param("CloudCopyCat-Batch-Role-Arn")
 
         client = boto3.client("s3control")
-        client.create_job(
+        job_id = client.create_job(
             AccountId            = account_id,
             ConfirmationRequired = False,
             Operation = {
@@ -121,10 +132,12 @@ def lambda_handler(event, _):
             },
             Priority = 10,
             RoleArn  = batch_role_arn
-        )
+        )["JobId"]
 
+        print(f"Created Job ID {job_id}")
         state["awaiting_inv_report"].remove(src_bucket_name)
         state["awaiting_batch_copy"].append(src_bucket_name)
+        write_state_file(dest_bucket_name, state_path, state)
 
     else:
         print("Received unexpected event")
