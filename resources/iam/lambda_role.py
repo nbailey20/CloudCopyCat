@@ -21,19 +21,23 @@ LAMBDA_IAM_POLICY_TEMPLATE = {
         },
         {
             "Effect": "Allow",
-            "Action": [
-                "iam:PassRole"
-            ],
+            "Action": "iam:PassRole",
             "Resource": "" ## filled in at deployment time
         },
         {
             "Effect": "Allow",
-            "Action": [
-                "kms:*"
-            ],
-            "Resource": [ ## TODO fine tune this
-                "*"
-            ]
+            "Action": "kms:*", ## TODO fine tune this
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "ssm:GetParameter",
+            "Resource": "" ## filled in at deployment time
+        },
+        {
+            "Effect": "Allow",
+            "Action": "s3:GetObject",
+            "Resource": "" ## filled in at deployment time
         }
     ]
 }

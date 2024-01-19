@@ -21,6 +21,7 @@ def create_lambda(session, role_arn, bucket_name, kms_arn):
             "S3Bucket": bucket_name,
             "S3Key": f"CloudCopyCat-Data/{LAMBDA_FUNCTION_NAME}"
         },
+        Timeout   = 120,
         KMSKeyArn = kms_arn
     )["FunctionArn"]
 

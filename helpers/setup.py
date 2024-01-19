@@ -42,7 +42,7 @@ def create_resources(args):
         create_sns_topic(dest_session, kms["id"], args.email)
         create_bucket(dest_session, region, kms["id"], args.dest_bucket)
         roles = create_iam_roles(dest_session, source_bucket_dict[region], dest_account_id, args.dest_bucket)
-        time.sleep(15)
+        time.sleep(5)
         lambda_arn = create_lambda(dest_session, roles[LAMBDA_ROLE_NAME], args.dest_bucket, kms["arn"])
         create_ssm_params(dest_session, ssm_params, kms["id"])
         rule_arn = create_eb_rule(dest_session, lambda_arn, args.dest_bucket)
