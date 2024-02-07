@@ -2,25 +2,53 @@
 
 DEST_BUCKET_POLICY_TEMPLATE = {
     "Version": "2012-10-17",
+    "Id": "",
     "Statement": [
         {
-            "Sid": "InventoryReportWrites",
+            "Sid": "ReplicateToDestination",
             "Effect": "Allow",
             "Principal": {
-                "Service": "s3.amazonaws.com"
+                "AWS": "" ## to be filled in at deployment time
             },
-            "Action": "s3:PutObject",
-            "Resource": [], ## To be filled in at deployment time
-            "Condition": {
-                "StringEquals": {
-                    "aws:SourceAccount": "", ## To be filled in at deployment time
-                    "s3:x-amz-acl": "bucket-owner-full-control"
-                },
-                "ArnLike": {
-                    "aws:SourceArn": [] ## To be filled in at deployment time
-                }
-            }
-        }
+            "Action": [
+                "s3:ReplicateObject",
+                "s3:ReplicateDelete",
+                "s3:PutObject",
+                "s3:*"
+            ],
+            "Resource": "" ## to be filled in at deployment time
+        },
+        {
+            "Sid": "Set permissions on bucket",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "" ## to be filled in at deployment time
+            },
+            "Action": [
+                "s3:List*",
+                "s3:GetBucketVersioning",
+                "s3:PutBucketVersioning"
+            ],
+            "Resource": "" ## to be filled in at deployment time
+        },
+        # {
+        #     "Sid": "InventoryReportWrites",
+        #     "Effect": "Allow",
+        #     "Principal": {
+        #         "Service": "s3.amazonaws.com"
+        #     },
+        #     "Action": "s3:PutObject",
+        #     "Resource": "arn:aws:s3:::cloudcopycatter126/*",
+        #     "Condition": {
+        #         "StringEquals": {
+        #             "aws:SourceAccount": "440312106873",
+        #             "s3:x-amz-acl": "bucket-owner-full-control"
+        #         },
+        #         "ArnLike": {
+        #             "aws:SourceArn": "arn:aws:s3:::cf-templates-9hgl3ez8z7yl-us-west-1"
+        #         }
+        #     }
+        # }
     ]
 }
 

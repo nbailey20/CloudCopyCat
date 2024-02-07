@@ -22,11 +22,10 @@ def delete_resources(args):
             "CloudCopyCat-Batch-Role-Arn"
         ]
 
-        # delete_inv_configs(src_session, source_bucket_dict[region])
         delete_eb_rule(dest_session)
         delete_lambda(dest_session)
         delete_ssm_params(dest_session, ssm_params)
-        delete_iam_roles(dest_session)
+        delete_iam_roles(src_session, dest_session)
         delete_sns_topic(dest_session)
         delete_kms_key(dest_session)
 
@@ -36,5 +35,5 @@ def delete_resources(args):
         # state = get_state_object(dp)
         # display_status(state)
 
-        delete_bucket(dest_session, args.dest_bucket)
+        #delete_bucket(dest_session, args.dest_bucket)
     return

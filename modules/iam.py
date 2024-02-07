@@ -29,38 +29,38 @@ def generate_replication_policy(source_buckets, dest_bucket_name):
 
 
 ## Create IAM roles and attached policies for Lambda and Batch Copy jobs
-def create_iam_roles(session, source_buckets, dest_account_id, dest_bucket_name):
-    client = session.client("iam")
-
+def create_iam_roles(src_session, dest_session, source_buckets, dest_account_id, dest_bucket_name):
     roles_list = [
         {
             "RoleName":    LAMBDA_ROLE_NAME,
             "PolicyName":  LAMBDA_POLICY_NAME,
             "TrustPolicy": json.dumps(LAMBDA_TRUST_POLICY),
-            "IamPolicy":   generate_lambda_policy(dest_account_id, dest_bucket_name)
+            "IamPolicy":   generate_lambda_policy(dest_account_id, dest_bucket_name),
+            "ApiClient":   dest_session.client("iam")
         },
         {
             "RoleName":    REPLICATION_ROLE_NAME,
             "PolicyName":  REPLICATION_POLICY_NAME,
             "TrustPolicy": json.dumps(REPLICATION_TRUST_POLICY),
-            "IamPolicy":   generate_replication_policy(source_buckets, dest_bucket_name)
+            "IamPolicy":   generate_replication_policy(source_buckets, dest_bucket_name),
+            "ApiClient":   src_session.client("iam")
         }
     ]
 
     role_arns = {}
     for role in roles_list:
-        role_arn = client.create_role(
+        role_arn = role["ApiClient"].create_role(
             RoleName                 = role["RoleName"],
             AssumeRolePolicyDocument = role["TrustPolicy"]
         )["Role"]["Arn"]
         role_arns[role["RoleName"]] = role_arn
 
-        policy_arn = client.create_policy(
+        policy_arn = role["ApiClient"].create_policy(
             PolicyName     = role["PolicyName"],
             PolicyDocument = role["IamPolicy"]
         )["Policy"]["Arn"]
 
-        client.attach_role_policy(
+        role["ApiClient"].attach_role_policy(
             RoleName  = role["RoleName"],
             PolicyArn = policy_arn
         )
@@ -69,30 +69,32 @@ def create_iam_roles(session, source_buckets, dest_account_id, dest_bucket_name)
 
 
 
-def delete_iam_roles(session):
-    account_id = get_account_id(session=session)
-    client = session.client("iam")
+def delete_iam_roles(src_session, dest_session):
+    src_account_id = get_account_id(session=src_session)
+    dest_account_id = get_account_id(session=dest_session)
 
     roles_list = [
         {
             "RoleName":  LAMBDA_ROLE_NAME,
-            "PolicyArn": f"arn:aws:iam::{account_id}:policy/{LAMBDA_POLICY_NAME}"
+            "PolicyArn": f"arn:aws:iam::{dest_account_id}:policy/{LAMBDA_POLICY_NAME}",
+            "ApiClient": dest_session.client("iam")
         },
         {
             "RoleName":  REPLICATION_ROLE_NAME,
-            "PolicyArn": f"arn:aws:iam::{account_id}:policy/{REPLICATION_POLICY_NAME}"
+            "PolicyArn": f"arn:aws:iam::{src_account_id}:policy/{REPLICATION_POLICY_NAME}",
+            "ApiClient": src_session.client("iam")
         }
     ]
 
     for role in roles_list:
-        client.detach_role_policy(
+        role["ApiClient"].detach_role_policy(
             RoleName  = role["RoleName"],
             PolicyArn = role["PolicyArn"]
         )
-        client.delete_role(
+        role["ApiClient"].delete_role(
             RoleName = role["RoleName"]
         )
-        client.delete_policy(
+        role["ApiClient"].delete_policy(
             PolicyArn = role["PolicyArn"]
         )
     return

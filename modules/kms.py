@@ -1,6 +1,6 @@
 import json
 
-from helpers.config import KMS_ALIAS_NAME
+from helpers.config import KMS_ALIAS_NAME, REPLICATION_ROLE_NAME
 from resources.kms.key import KMS_POLICY_TEMPLATE
 
 
@@ -11,6 +11,7 @@ def generate_kms_policy(src_account_id, dest_account_id, buckets):
     KMS_POLICY_TEMPLATE["Statement"][1]["Condition"]["StringEquals"]["aws:SourceAccount"] = src_account_id
     bucket_arns = [f"arn:aws:s3:::{b}" for b in buckets]
     KMS_POLICY_TEMPLATE["Statement"][1]["Condition"]["ArnLike"]["aws:SourceArn"] = bucket_arns
+    KMS_POLICY_TEMPLATE["Statement"][2]["Principal"]["AWS"] = f"arn:aws:iam::{src_account_id}:role/{REPLICATION_ROLE_NAME}"
     return json.dumps(KMS_POLICY_TEMPLATE)
 
 

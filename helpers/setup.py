@@ -140,7 +140,7 @@ def create_resources(args):
             dest_account_id,
             args.dest_bucket,
             roles[REPLICATION_ROLE_NAME],
-            ""
+            kms["arn"]
         )
         create_batch_replication_jobs(
             src_session,

@@ -41,9 +41,8 @@ def delete_eb_rule(session):
         Ids  = [EVENTBRIDGE_RULE_TARGETID]
     )
 
-    # if failed_entries["FailedEntryCount"] != 0:
-    #     print(failed_entries[0])
-    print(failed_entries)
+    if failed_entries["FailedEntryCount"] != 0:
+        print("Failed to remove targets from EB rule")
 
     client.delete_rule(
         Name = EVENTBRIDGE_RULE_NAME

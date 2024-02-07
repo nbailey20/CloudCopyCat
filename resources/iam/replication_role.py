@@ -23,6 +23,9 @@ REPLICATION_IAM_POLICY_TEMPLATE = {
 				"s3:GetObject",
 				"s3:GetObjectVersion",
         "s3:PutObject",
+        "s3:ReplicateObject",
+        "s3:ReplicateTags",
+        "s3:ObjectOwnerOverrideToBucketOwner"
 			],
 			"Effect": "Allow",
 			"Resource": [] ## to be filled in at deployment time

@@ -30,24 +30,18 @@ KMS_POLICY_TEMPLATE = {
                 }
             }
         }
-        # {
-        #     "Sid": "Allow Batch role use of the KMS key",
-        #     "Effect": "Allow",
-        #     "Principal": {
-        #         "AWS": "s3.amazonaws.com"
-        #     },
-        #     "Action": [
-        #         "kms:GenerateDataKey"
-        #     ],
-        #     "Resource": "*",
-        #     "Condition":{
-        #         "StringEquals":{
-        #             "aws:SourceAccount":"" ## to be filled in at deployment time
-        #         },
-        #         "ArnLike":{
-        #             "aws:SourceArn": [] ## to be filled in at deployment time
-        #         }
-        #     }
-        # }
+        {
+            "Sid": "Allow Batch role use of the KMS key",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "" ## to be filled in at deployment time
+            },
+            "Action": [
+                "kms:GenerateDataKey",
+                "kms:Decrypt",
+                "kms:Encrypt"
+            ],
+            "Resource": "*"
+        }
     ]
 }
