@@ -48,105 +48,105 @@ def create_resources(args):
         src_session = create_session(args.src_profile, region=region)
         dest_session = create_session(args.dest_profile, region=region)
 
-        # ## type(kms) == {"arn": str, "id": str}
-        # kms = create_kms_key(
-        #         dest_session,
-        #         src_account_id,
-        #         dest_account_id,
-        #         source_bucket_dict[region]
-        #     )
+        ## type(kms) == {"arn": str, "id": str}
+        kms = create_kms_key(
+                dest_session,
+                src_account_id,
+                dest_account_id,
+                source_bucket_dict[region]
+            )
         
-        # create_sns_topic(
-        #     dest_session,
-        #     kms["id"],
-        #     args.email
-        # )
-        # create_bucket(
-        #     dest_session,
-        #     kms["arn"],
-        #     args.dest_bucket
-        # )
-        # create_state_object(
-        #     dest_session,
-        #     source_bucket_dict[region],
-        #     args.dest_bucket
-        # )
+        create_sns_topic(
+            dest_session,
+            kms["id"],
+            args.email
+        )
+        create_bucket(
+            dest_session,
+            kms["arn"],
+            args.dest_bucket
+        )
+        create_state_object(
+            dest_session,
+            source_bucket_dict[region],
+            args.dest_bucket
+        )
 
-        # ## type(roles) == {rolename => str}
-        # roles = create_iam_roles(
-        #     src_session,
-        #     dest_session,
-        #     source_bucket_dict[region],
-        #     dest_account_id,
-        #     args.dest_bucket
-        # )
-        # ## ensure roles are fully created before Lambda to avoid role assumption error
-        # time.sleep(5)
+        ## type(roles) == {rolename => str}
+        roles = create_iam_roles(
+            src_session,
+            dest_session,
+            source_bucket_dict[region],
+            dest_account_id,
+            args.dest_bucket
+        )
+        ## ensure roles are fully created before Lambda to avoid role assumption error
+        time.sleep(5)
 
-        # ssm_params = [
-        #     {
-        #         "Name": "CloudCopyCat-Source-Account-ID",
-        #         "Value": src_account_id
-        #     },
-        #     {
-        #         "Name": "CloudCopyCat-State-File-Path",
-        #         "Value": LAMBDA_STATE_FILE_PATH
-        #     },
-        #     {
-        #         "Name": "CloudCopyCat-Batch-Role-Arn",
-        #         "Value": f"arn:aws:iam::{dest_account_id}:role/{REPLICATION_ROLE_NAME}"
-        #     }
-        # ]
-        # create_ssm_params(
-        #     dest_session,
-        #     ssm_params,
-        #     kms["id"]
-        # )
+        ssm_params = [
+            {
+                "Name": "CloudCopyCat-Source-Account-ID",
+                "Value": src_account_id
+            },
+            {
+                "Name": "CloudCopyCat-State-File-Path",
+                "Value": LAMBDA_STATE_FILE_PATH
+            },
+            {
+                "Name": "CloudCopyCat-Batch-Role-Arn",
+                "Value": f"arn:aws:iam::{dest_account_id}:role/{REPLICATION_ROLE_NAME}"
+            }
+        ]
+        create_ssm_params(
+            dest_session,
+            ssm_params,
+            kms["id"]
+        )
 
-        # ## type(lambda_arn) == str
-        # lambda_arn = create_lambda(
-        #     dest_session,
-        #     roles[LAMBDA_ROLE_NAME],
-        #     args.dest_bucket,
-        #     kms["arn"]
-        # )
-        # ## type(rule_arn) == str
-        # rule_arn = create_eb_rule(
-        #     dest_session,
-        #     lambda_arn,
-        #     args.dest_bucket
-        # )
-        # add_lambda_permission(
-        #     dest_session,
-        #     rule_arn,
-        #     dest_account_id
-        # )
+        ## type(lambda_arn) == str
+        lambda_arn = create_lambda(
+            dest_session,
+            roles[LAMBDA_ROLE_NAME],
+            args.dest_bucket,
+            kms["arn"]
+        )
+        ## type(rule_arn) == str
+        rule_arn = create_eb_rule(
+            dest_session,
+            lambda_arn,
+            args.dest_bucket
+        )
+        add_lambda_permission(
+            dest_session,
+            rule_arn,
+            dest_account_id
+        )
 
-        # add_bucket_policies(
-        #     src_session,
-        #     dest_session,
-        #     source_bucket_dict[region],
-        #     src_account_id,
-        #     args.dest_bucket,
-        #     roles[REPLICATION_ROLE_NAME]
-        # )
-        # enable_bucket_versioning(
-        #     src_session,
-        #     source_bucket_dict[region]
-        # )
-        # enable_s3_replication(
-        #     src_session,
-        #     source_bucket_dict[region],
-        #     dest_account_id,
-        #     args.dest_bucket,
-        #     "arn:aws:iam::440312106873:role/TestBatchRepRole",
-        #     ""
-        # )
+        add_bucket_policies(
+            src_session,
+            dest_session,
+            source_bucket_dict[region],
+            src_account_id,
+            args.dest_bucket,
+            roles[REPLICATION_ROLE_NAME]
+        )
+        enable_bucket_versioning(
+            src_session,
+            source_bucket_dict[region]
+        )
+        enable_s3_replication(
+            src_session,
+            source_bucket_dict[region],
+            dest_account_id,
+            args.dest_bucket,
+            roles[REPLICATION_ROLE_NAME],
+            ""
+        )
         create_batch_replication_jobs(
             src_session,
             src_account_id,
             source_bucket_dict[region],
             args.dest_bucket,
-            "arn:aws:iam::440312106873:role/TestBatchRepRole"
+            roles[REPLICATION_ROLE_NAME]
         )
     return
