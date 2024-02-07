@@ -47,7 +47,7 @@ import boto3
 """
 
 
-def read_state_file(bucket_name, object_path):
+def read_s3_object(bucket_name, object_path):
     client = boto3.client("s3")
     state_obj = client.get_object(
         Bucket = bucket_name,
@@ -84,10 +84,16 @@ def lambda_handler(event, _):
     dest_bucket_name = event["detail"]["bucket"]["name"]
 
     state_path    = get_ssm_param("CloudCopyCat-State-File-Path")
-    state         = read_state_file(dest_bucket_name, state_path)
-    manifest_type = event["detail"]["object"]["key"].split("/")[2]
+    state         = read_s3_object(dest_bucket_name, state_path)
+    manifest_path = event["detail"]["object"]["key"]
+    manifest_type = manifest_path.split("/")[2]
 
     if manifest_type == "BatchCopy" and src_bucket_name in state["awaiting_batch_copy"]:
+        manifest = read_s3_object(dest_bucket_name, manifest_path)
+        ## ignore placeholder objects delivered to S3
+        if manifest["Message"] and "This is a placeholder" in manifest["Message"]:
+            print(f"Received placeholder message for {src_bucket_name}")
+            return
         print(f"Batch copy complete for {src_bucket_name}")
         state["awaiting_batch_copy"].remove(src_bucket_name)
         ## TODO make sure all objects copied!
@@ -110,14 +116,14 @@ def lambda_handler(event, _):
                 "S3PutObjectCopy": {
                     "TargetResource":  bucket_arn,
                     "StorageClass":    "STANDARD",
-                    "TargetKeyPrefix": "CloudCopyCat-Data"
+                    "TargetKeyPrefix": src_bucket_name
                 }
             },
             Report = {
                 "Bucket":      bucket_arn,
                 "Format":      "Report_CSV_20180820",
                 "Enabled":     True,
-                "Prefix":      "CloudCopyCat-Data/BatchCopy",
+                "Prefix":      f"CloudCopyCat-Data/{src_bucket_name}/BatchCopy",
                 "ReportScope": "AllTasks"
             },
             #ClientRequestToken="string",

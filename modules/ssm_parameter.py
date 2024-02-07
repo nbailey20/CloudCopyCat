@@ -1,3 +1,4 @@
+## Create encrypted parameters used by Lambda
 def create_ssm_params(session, params, key_id):
     client = session.client("ssm")
     for param in params:

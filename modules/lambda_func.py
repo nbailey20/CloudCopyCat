@@ -1,10 +1,10 @@
 from helpers.config import LAMBDA_RUNTIME, LAMBDA_FUNCTION_NAME
 
 from modules.s3 import create_s3_object
-from modules.sts import get_account_id
 
 
 def create_lambda(session, role_arn, bucket_name, kms_arn):
+    ## upload Lambda zip file to S3
     create_s3_object(session, 
                      bucket_name, 
                      f"CloudCopyCat-Data/{LAMBDA_FUNCTION_NAME}", 
@@ -28,11 +28,9 @@ def create_lambda(session, role_arn, bucket_name, kms_arn):
     return lambda_function_arn
 
 
-
-def add_lambda_permission(session, rule_arn):
-    account_id = get_account_id(session=session)
+## Add permission for eventbridge rule to invoke Lambda
+def add_lambda_permission(session, rule_arn, account_id):
     client = session.client("lambda")
-
     client.add_permission(
         FunctionName  = LAMBDA_FUNCTION_NAME,
         StatementId   = "EventBridgeInvokePermission",

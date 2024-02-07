@@ -1,7 +1,7 @@
 from modules.sts import create_session
 from modules.kms import delete_kms_key
 from modules.sns import delete_sns_topic
-from modules.s3 import get_buckets, delete_inv_configs, delete_bucket
+from modules.s3 import get_buckets, delete_bucket# remove replication
 from modules.iam import delete_iam_roles
 from modules.eventbridge import delete_eb_rule
 from modules.lambda_func import delete_lambda

@@ -1,14 +1,15 @@
 from helpers.config import SNS_TOPIC_NAME
 
 
-def create_sns_topic(session, kms_id, target_email):
+## Create SNS topic that emails targets about copy completion status / errors
+def create_sns_topic(session, kms_arn, target_email):
     client = session.client("sns")
 
     topic_arn = client.create_topic(
         Name = SNS_TOPIC_NAME,
         Attributes = {
            # Policy =
-           "KmsMasterKeyId": kms_id
+           "KmsMasterKeyId": kms_arn
         }
     )["TopicArn"]
     
