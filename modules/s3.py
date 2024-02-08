@@ -123,18 +123,20 @@ def generate_src_bucket_policies(session, src_buckets, replication_role_arn):
 def generate_dest_bucket_policy(src_buckets, src_account_id, dest_bucket_name, replication_role_arn):
     from resources.s3.dest_bucket import DEST_BUCKET_POLICY_TEMPLATE
 
+    src_arns = [f"arn:aws:s3:::{b}" for b in src_buckets]
     DEST_BUCKET_POLICY_TEMPLATE["Statement"][0]["Principal"]["AWS"] = replication_role_arn
     DEST_BUCKET_POLICY_TEMPLATE["Statement"][0]["Resource"] = f"arn:aws:s3:::{dest_bucket_name}/*"
     DEST_BUCKET_POLICY_TEMPLATE["Statement"][1]["Principal"]["AWS"] = replication_role_arn
-    DEST_BUCKET_POLICY_TEMPLATE["Statement"][0]["Resource"] = f"arn:aws:s3:::{dest_bucket_name}"
-    # statement["Condition"]["ArnLike"]["aws:SourceArn"] = src_arns
-    # statement["Condition"]["StringEquals"]["aws:SourceAccount"] = src_account_id
+    DEST_BUCKET_POLICY_TEMPLATE["Statement"][1]["Resource"] = f"arn:aws:s3:::{dest_bucket_name}"
+    DEST_BUCKET_POLICY_TEMPLATE["Statement"][2]["Resource"] = f"arn:aws:s3:::{dest_bucket_name}/*"
+    DEST_BUCKET_POLICY_TEMPLATE["Statement"][2]["Condition"]["ArnLike"]["aws:SourceArn"] = src_arns
+    DEST_BUCKET_POLICY_TEMPLATE["Statement"][2]["Condition"]["StringEquals"]["aws:SourceAccount"] = src_account_id
     return json.dumps(DEST_BUCKET_POLICY_TEMPLATE)
 
 
 ## Update/put bucket policies for source and destination buckets
 def add_bucket_policies(src_session, dest_session, src_buckets, src_account_id, dest_bucket_name, replication_role_arn):
-    dest_bucket_policy = generate_dest_bucket_policy(src_buckets, src_account_id, dest_bucket_name)
+    dest_bucket_policy = generate_dest_bucket_policy(src_buckets, src_account_id, dest_bucket_name, replication_role_arn)
     client = dest_session.client("s3")
     client.put_bucket_policy(
         Bucket = dest_bucket_name,
@@ -224,7 +226,7 @@ def enable_s3_replication(session, src_buckets, dest_account_id, dest_bucket_nam
     return
 
 
-def create_batch_replication_jobs(session, src_account_id, src_buckets, dest_bucket, role_arn):
+def create_batch_replication_jobs(session, src_account_id, src_buckets, dest_account_id, dest_bucket, role_arn, kms_arn):
     client = session.client("s3control")
 
     for src_bucket in src_buckets:
@@ -247,9 +249,15 @@ def create_batch_replication_jobs(session, src_account_id, src_buckets, dest_buc
                 "S3JobManifestGenerator": {
                     "SourceBucket": f"arn:aws:s3:::{src_bucket}",
                     "ManifestOutputLocation": {
-                        "Bucket": f"arn:aws:s3:::{dest_bucket}",
-                        "ManifestPrefix": f"CloudCopyCat-Data/{src_bucket}/BatchReplication",
-                        "ManifestFormat": "S3InventoryReport_CSV_20211130"
+                        "Bucket":                      f"arn:aws:s3:::{dest_bucket}",
+                        "ManifestPrefix":              f"CloudCopyCat-Data/{src_bucket}/BatchReplication",
+                        "ManifestFormat":              "S3InventoryReport_CSV_20211130",
+                        "ExpectedManifestBucketOwner": dest_account_id,
+                        "ManifestEncryption": {
+                            "SSEKMS": {
+                                "KeyId": kms_arn
+                            }
+                        }
                     },
                     "Filter": {
                         "EligibleForReplication": True

@@ -25,11 +25,13 @@ def delete_resources(args):
         delete_eb_rule(dest_session)
         delete_lambda(dest_session)
         delete_ssm_params(dest_session, ssm_params)
-        delete_iam_roles(src_session, dest_session)
         delete_sns_topic(dest_session)
         delete_kms_key(dest_session)
+        delete_iam_roles(src_session, dest_session)
 
-        ## add step to remove statement from source bucket policies
+        ## TODO add step to remove statement from source bucket policies
+
+        ## TODO option to remove replication rule
 
         ## Print status for confirmation
         # state = get_state_object(dp)

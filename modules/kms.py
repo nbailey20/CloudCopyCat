@@ -6,19 +6,20 @@ from resources.kms.key import KMS_POLICY_TEMPLATE
 
 ## Statement 0 - default root permissions
 ## Statement 1 - allow S3 to put inv report if originating from expected buckets in source account
-def generate_kms_policy(src_account_id, dest_account_id, buckets):
+def generate_kms_policy(src_account_id, dest_account_id, src_buckets, dest_bucket):
     KMS_POLICY_TEMPLATE["Statement"][0]["Principal"]["AWS"] = f"arn:aws:iam::{dest_account_id}:root"
-    KMS_POLICY_TEMPLATE["Statement"][1]["Condition"]["StringEquals"]["aws:SourceAccount"] = src_account_id
-    bucket_arns = [f"arn:aws:s3:::{b}" for b in buckets]
-    KMS_POLICY_TEMPLATE["Statement"][1]["Condition"]["ArnLike"]["aws:SourceArn"] = bucket_arns
+    KMS_POLICY_TEMPLATE["Statement"][1]["Condition"]["StringEquals"]["aws:SourceAccount"] = [src_account_id, dest_account_id]
+    src_bucket_arns = [f"arn:aws:s3:::{b}" for b in src_buckets]
+    KMS_POLICY_TEMPLATE["Statement"][1]["Condition"]["ArnLike"]["aws:SourceArn"] = src_bucket_arns + [f"arn:aws:s3:::{dest_bucket}"]
     KMS_POLICY_TEMPLATE["Statement"][2]["Principal"]["AWS"] = f"arn:aws:iam::{src_account_id}:role/{REPLICATION_ROLE_NAME}"
+    print(KMS_POLICY_TEMPLATE)
     return json.dumps(KMS_POLICY_TEMPLATE)
 
 
 ## Create KMS CMK and alias with appropriate key policy
 ## Return key ID and ARN as a string dict
-def create_kms_key(session, src_account_id, dest_account_id, buckets):
-    kms_policy = generate_kms_policy(src_account_id, dest_account_id, buckets)
+def create_kms_key(session, src_account_id, dest_account_id, src_buckets, dest_bucket):
+    kms_policy = generate_kms_policy(src_account_id, dest_account_id, src_buckets, dest_bucket)
     client = session.client("kms")
 
     kms_data = client.create_key(

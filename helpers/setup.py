@@ -48,12 +48,25 @@ def create_resources(args):
         src_session = create_session(args.src_profile, region=region)
         dest_session = create_session(args.dest_profile, region=region)
 
+        ## type(roles) == {rolename => str}
+        roles = create_iam_roles(
+            src_session,
+            dest_session,
+            source_bucket_dict[region],
+            dest_account_id,
+            args.dest_bucket
+        )
+
+        ## ensure roles are fully created before proceeding
+        time.sleep(10)
+
         ## type(kms) == {"arn": str, "id": str}
         kms = create_kms_key(
                 dest_session,
                 src_account_id,
                 dest_account_id,
-                source_bucket_dict[region]
+                source_bucket_dict[region],
+                args.dest_bucket
             )
         
         create_sns_topic(
@@ -72,16 +85,7 @@ def create_resources(args):
             args.dest_bucket
         )
 
-        ## type(roles) == {rolename => str}
-        roles = create_iam_roles(
-            src_session,
-            dest_session,
-            source_bucket_dict[region],
-            dest_account_id,
-            args.dest_bucket
-        )
-        ## ensure roles are fully created before Lambda to avoid role assumption error
-        time.sleep(5)
+        
 
         ssm_params = [
             {
@@ -146,7 +150,9 @@ def create_resources(args):
             src_session,
             src_account_id,
             source_bucket_dict[region],
+            dest_account_id,
             args.dest_bucket,
-            roles[REPLICATION_ROLE_NAME]
+            roles[REPLICATION_ROLE_NAME],
+            kms["arn"]
         )
     return
