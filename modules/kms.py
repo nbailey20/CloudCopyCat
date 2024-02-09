@@ -11,7 +11,7 @@ def generate_kms_policy(src_account_id, dest_account_id, src_buckets, dest_bucke
     KMS_POLICY_TEMPLATE["Statement"][1]["Condition"]["StringEquals"]["aws:SourceAccount"] = [src_account_id, dest_account_id]
     src_bucket_arns = [f"arn:aws:s3:::{b}" for b in src_buckets]
     KMS_POLICY_TEMPLATE["Statement"][1]["Condition"]["ArnLike"]["aws:SourceArn"] = src_bucket_arns + [f"arn:aws:s3:::{dest_bucket}"]
-    KMS_POLICY_TEMPLATE["Statement"][2]["Principal"]["AWS"] = f"arn:aws:iam::{src_account_id}:role/{REPLICATION_ROLE_NAME}"
+    KMS_POLICY_TEMPLATE["Statement"][2]["Condition"]["StringEquals"]["aws:PrincipalArn"] = f"arn:aws:iam::{src_account_id}:role/{REPLICATION_ROLE_NAME}"
     print(KMS_POLICY_TEMPLATE)
     return json.dumps(KMS_POLICY_TEMPLATE)
 

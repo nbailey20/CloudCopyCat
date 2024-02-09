@@ -25,28 +25,31 @@ KMS_POLICY_TEMPLATE = {
                 "kms:*"
             ],
             "Resource": "*",
-            "Condition":{
-                "StringEquals":{
+            "Condition": {
+                "StringEquals": {
                     "aws:SourceAccount":"" ## to be filled in at deployment time
                 },
-                "ArnLike":{
+                "ArnLike": {
                     "aws:SourceArn": [] ## to be filled in at deployment time
                 }
             }
         },
         {
-            "Sid": "Allow Batch role use of the KMS key",
+            "Sid": "Allow Replication role to deliver objects",
             "Effect": "Allow",
             "Principal": {
-                "AWS": "" ## to be filled in at deployment time
+                "AWS": "*"
             },
             "Action": [
-                "kms:GenerateDataKey",
-                "kms:Decrypt",
                 "kms:Encrypt",
-                "kms:*"
+                "kms:GenerateDataKey*"
             ],
-            "Resource": "*"
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:PrincipalArn": "" ## to be filled in at deployment time
+                }
+            }
         }
     ]
 }

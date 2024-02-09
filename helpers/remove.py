@@ -19,17 +19,17 @@ def delete_resources(args):
         ssm_params = [
             "CloudCopyCat-Source-Account-ID",
             "CloudCopyCat-State-File-Path",
-            "CloudCopyCat-Batch-Role-Arn"
+            "CloudCopyCat-Batch-Copy-Role-Arn"
         ]
 
         delete_eb_rule(dest_session)
         delete_lambda(dest_session)
         delete_ssm_params(dest_session, ssm_params)
         delete_sns_topic(dest_session)
-        delete_kms_key(dest_session)
-        delete_iam_roles(src_session, dest_session)
-
         ## TODO add step to remove statement from source bucket policies
+        delete_iam_roles(src_session, dest_session)
+        delete_kms_key(dest_session)
+
 
         ## TODO option to remove replication rule
 

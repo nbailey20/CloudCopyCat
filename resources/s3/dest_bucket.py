@@ -5,7 +5,7 @@ DEST_BUCKET_POLICY_TEMPLATE = {
     "Id": "",
     "Statement": [
         {
-            "Sid": "ReplicateToDestination",
+            "Sid": "Replication role object delivery",
             "Effect": "Allow",
             "Principal": {
                 "AWS": "" ## to be filled in at deployment time
@@ -15,19 +15,6 @@ DEST_BUCKET_POLICY_TEMPLATE = {
                 "s3:ReplicateDelete",
                 "s3:PutObject",
                 "s3:*"
-            ],
-            "Resource": "" ## to be filled in at deployment time
-        },
-        {
-            "Sid": "Set permissions on bucket",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "" ## to be filled in at deployment time
-            },
-            "Action": [
-                "s3:List*",
-                "s3:GetBucketVersioning",
-                "s3:PutBucketVersioning"
             ],
             "Resource": "" ## to be filled in at deployment time
         },

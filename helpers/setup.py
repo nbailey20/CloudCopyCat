@@ -1,6 +1,7 @@
 import time
 
-from helpers.config import LAMBDA_STATE_FILE_PATH, LAMBDA_ROLE_NAME, REPLICATION_ROLE_NAME
+from helpers.config import LAMBDA_STATE_FOLDER, LAMBDA_STATE_FILE_NAME
+from helpers.config import LAMBDA_ROLE_NAME, REPLICATION_ROLE_NAME, BATCH_COPY_ROLE_NAME
 
 from modules.sts import get_account_id, create_session
 from modules.kms import create_kms_key
@@ -48,18 +49,6 @@ def create_resources(args):
         src_session = create_session(args.src_profile, region=region)
         dest_session = create_session(args.dest_profile, region=region)
 
-        ## type(roles) == {rolename => str}
-        roles = create_iam_roles(
-            src_session,
-            dest_session,
-            source_bucket_dict[region],
-            dest_account_id,
-            args.dest_bucket
-        )
-
-        ## ensure roles are fully created before proceeding
-        time.sleep(10)
-
         ## type(kms) == {"arn": str, "id": str}
         kms = create_kms_key(
                 dest_session,
@@ -68,7 +57,20 @@ def create_resources(args):
                 source_bucket_dict[region],
                 args.dest_bucket
             )
-        
+
+        ## type(roles) == {rolename => str}
+        roles = create_iam_roles(
+            src_session,
+            dest_session,
+            source_bucket_dict[region],
+            dest_account_id,
+            args.dest_bucket,
+            kms["arn"]
+        )
+
+        ## ensure roles are fully created before proceeding
+        time.sleep(10)
+
         create_sns_topic(
             dest_session,
             kms["id"],
@@ -85,7 +87,6 @@ def create_resources(args):
             args.dest_bucket
         )
 
-        
 
         ssm_params = [
             {
@@ -94,11 +95,11 @@ def create_resources(args):
             },
             {
                 "Name": "CloudCopyCat-State-File-Path",
-                "Value": LAMBDA_STATE_FILE_PATH
+                "Value": f"{LAMBDA_STATE_FOLDER}/{LAMBDA_STATE_FILE_NAME}"
             },
             {
-                "Name": "CloudCopyCat-Batch-Role-Arn",
-                "Value": f"arn:aws:iam::{dest_account_id}:role/{REPLICATION_ROLE_NAME}"
+                "Name": "CloudCopyCat-Batch-Copy-Role-Arn",
+                "Value": f"arn:aws:iam::{dest_account_id}:role/{BATCH_COPY_ROLE_NAME}"
             }
         ]
         create_ssm_params(
@@ -114,6 +115,9 @@ def create_resources(args):
             args.dest_bucket,
             kms["arn"]
         )
+        ## lambda needs to be created before batch replication occurs
+        time.sleep(20)
+
         ## type(rule_arn) == str
         rule_arn = create_eb_rule(
             dest_session,
@@ -132,7 +136,8 @@ def create_resources(args):
             source_bucket_dict[region],
             src_account_id,
             args.dest_bucket,
-            roles[REPLICATION_ROLE_NAME]
+            roles[REPLICATION_ROLE_NAME],
+            roles[BATCH_COPY_ROLE_NAME]
         )
         enable_bucket_versioning(
             src_session,

@@ -91,7 +91,7 @@ def lambda_handler(event, _):
     if manifest_type == "BatchCopy" and src_bucket_name in state["awaiting_batch_copy"]:
         manifest = read_s3_object(dest_bucket_name, manifest_path)
         ## ignore placeholder objects delivered to S3
-        if manifest["Message"] and "This is a placeholder" in manifest["Message"]:
+        if "Message" in manifest and "This is a placeholder" in manifest["Message"]:
             print(f"Received placeholder message for {src_bucket_name}")
             return
         print(f"Batch copy complete for {src_bucket_name}")
@@ -106,7 +106,7 @@ def lambda_handler(event, _):
         bucket_arn     = f"arn:aws:s3:::{dest_bucket_name}"
         object_arn     = f"{bucket_arn}/{event['detail']['object']['key']}"
         etag           = event["detail"]["object"]["etag"]
-        batch_role_arn = get_ssm_param("CloudCopyCat-Batch-Role-Arn")
+        batch_role_arn = get_ssm_param("CloudCopyCat-Batch-Copy-Role-Arn")
 
         client = boto3.client("s3control")
         job_id = client.create_job(
