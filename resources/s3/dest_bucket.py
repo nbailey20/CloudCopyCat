@@ -5,7 +5,7 @@ DEST_BUCKET_POLICY_TEMPLATE = {
     "Id": "",
     "Statement": [
         {
-            "Sid": "Replication role object delivery",
+            "Sid": "CloudCopyCat-ReplicationDelivery",
             "Effect": "Allow",
             "Principal": {
                 "AWS": "" ## to be filled in at deployment time
@@ -19,7 +19,7 @@ DEST_BUCKET_POLICY_TEMPLATE = {
             "Resource": "" ## to be filled in at deployment time
         },
         {
-            "Sid": "InventoryReportWrites",
+            "Sid": "CloudCopyCat-InventoryReportWrites",
             "Effect": "Allow",
             "Principal": {
                 "Service": "s3.amazonaws.com"

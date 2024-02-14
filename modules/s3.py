@@ -1,14 +1,15 @@
-import json
+import json, copy
 from botocore.exceptions import ClientError
 
 
-## Returns dict of region str => bucket name list
-## If region != "*", only key in dict is region
+## Returns list of all buckets to copy, and dict of {region => bucket names list}
+## If region == "*", dict keys are all regions containing buckets
 def get_buckets(session, region):
     client = session.client("s3")
     bucket_names = [b["Name"] for b in client.list_buckets()["Buckets"]]
 
-    bucket_region_dict = {}
+    all_buckets = []
+    bucket_dict = {}
     for bucket_name in bucket_names:
         bucket_region = client.get_bucket_location(
             Bucket = bucket_name
@@ -18,14 +19,13 @@ def get_buckets(session, region):
             ## https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_bucket_location.html
             bucket_region = "us-east-1"
 
-        if bucket_region not in bucket_region_dict:
-            bucket_region_dict[bucket_region] = [bucket_name]
-        else:
-            bucket_region_dict[bucket_region].append(bucket_name)
-
-    if region != "*":
-        return {region: bucket_region_dict[region]}
-    return bucket_region_dict
+        if region == bucket_region or region == "*":
+            if bucket_region in bucket_dict:
+                bucket_dict[bucket_region].append(bucket_name)
+            else:
+                bucket_dict[bucket_region] = [bucket_name]
+            all_buckets.append(bucket_name)
+    return (all_buckets, bucket_dict)
 
 
 ## Enables bucket versioning for list of bucket names
@@ -92,32 +92,9 @@ def get_bucket_policy(session, bucket_name):
             Bucket = bucket_name
         )["Policy"])
     except ClientError as err:
-        print(err)
         policy = {"Version": "2012-10-17", "Statement": []}
     return policy
 
-
-## Append statement to existing source bucket policies to allow Batch Copy operations
-## If no bucket policy exists, create new one
-def generate_src_bucket_policies(session, src_buckets, batch_copy_role_arn):
-    from resources.s3.source_bucket import SOURCE_BUCKET_POLICY_TEMPLATE
-
-    policies = []
-    src_arns = [f"arn:aws:s3:::{b}/*" for b in src_buckets]
-
-    for idx, bucket in enumerate(src_buckets):
-        ## don't overwrite existing bucket policies
-        ## add an additional statement
-        policy = get_bucket_policy(session, bucket)
-        statements = policy["Statement"]
-        SOURCE_BUCKET_POLICY_TEMPLATE["Principal"]["AWS"] = [batch_copy_role_arn]
-        SOURCE_BUCKET_POLICY_TEMPLATE["Resource"] = [src_arns[idx]]
-        statements.append(
-            SOURCE_BUCKET_POLICY_TEMPLATE
-        )
-        policies.append(json.dumps(policy))
-    print(policies)
-    return policies
 
 
 def generate_dest_bucket_policy(src_buckets, src_account_id, dest_bucket_name, replication_role_arn):
@@ -133,7 +110,7 @@ def generate_dest_bucket_policy(src_buckets, src_account_id, dest_bucket_name, r
 
 
 ## Update/put bucket policies for source and destination buckets
-def add_bucket_policies(src_session, dest_session, src_buckets, src_account_id, dest_bucket_name, replication_role_arn, batch_copy_role_arn):
+def add_dest_bucket_policy(dest_session, src_buckets, src_account_id, dest_bucket_name, replication_role_arn):
     dest_bucket_policy = generate_dest_bucket_policy(src_buckets, src_account_id, dest_bucket_name, replication_role_arn)
     client = dest_session.client("s3")
     client.put_bucket_policy(
@@ -141,14 +118,56 @@ def add_bucket_policies(src_session, dest_session, src_buckets, src_account_id, 
         Policy = dest_bucket_policy
     )
     print("Added dest bucket policy")
+    return
 
-    src_bucket_policies = generate_src_bucket_policies(src_session, src_buckets, batch_copy_role_arn)
+
+## Append statement to existing source bucket policies to allow Batch Copy operations
+## If no bucket policy exists, create new one
+## If revert == True, remove statement from bucket policy
+def generate_src_bucket_policies(session, src_buckets, batch_copy_role_arn, revert):
+    from resources.s3.source_bucket import SOURCE_BUCKET_POLICY_TEMPLATE
+
+    policies = []
+    src_arns = [f"arn:aws:s3:::{b}/*" for b in src_buckets]
+
+    for idx, bucket in enumerate(src_buckets):
+        template = copy.deepcopy(SOURCE_BUCKET_POLICY_TEMPLATE)
+        ## don't overwrite existing bucket policies
+        ## add an additional statement
+        policy = get_bucket_policy(session, bucket)
+        statements = policy["Statement"]
+        if revert:
+            statements = [s for s in statements if "CloudCopyCat" not in s["Sid"]]
+            policy["Statement"] = statements
+        else:
+            template["Principal"]["AWS"] = batch_copy_role_arn
+            template["Resource"] = src_arns[idx]
+            statements.append(
+                template
+            )
+            policy["Statement"] = statements
+            #if idx <= 1: print(bucket, policy)
+        policies.append(policy)
+        if idx <= 2: print("\n", policies)
+    #print(policies[0])
+    return policies
+
+
+def update_src_bucket_policies(src_session, src_buckets, batch_copy_role_arn, revert=False):
+    src_bucket_policies = generate_src_bucket_policies(src_session, src_buckets, batch_copy_role_arn, revert)
     client = src_session.client("s3")
     for idx, bucket in enumerate(src_buckets):
-        client.put_bucket_policy(
-            Bucket = bucket,
-            Policy = src_bucket_policies[idx]
-        )
+        if not len(src_bucket_policies[idx]["Statement"]):
+            client.delete_bucket_policy(
+                Bucket = bucket
+            )
+        else:
+            print(bucket)
+         #   print(src_bucket_policies[idx])
+            client.put_bucket_policy(
+                Bucket = bucket,
+                Policy = json.dumps(src_bucket_policies[idx])
+            )
     print("Updated source bucket policies")
     return
 
@@ -161,7 +180,7 @@ def create_s3_object(session, bucket_name, key, filename=None, data=None):
             Filename = filename,
             Key      = key
         )
-    
+
     elif data:
         client.put_object(
             Body   = bytes(json.dumps(data), encoding="utf-8"),

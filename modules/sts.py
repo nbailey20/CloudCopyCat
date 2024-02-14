@@ -2,6 +2,8 @@ import boto3
 
 
 def create_session(profile_name, region="us-east-1"):
+    if region == "*":
+        region = "us-east-1"
     return boto3.Session(profile_name=profile_name, region_name=region)
 
 

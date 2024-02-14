@@ -52,16 +52,16 @@ def parse_args():
     parser.add_argument(
         "-r", 
         "--region",
-        dest    ="region",
+        dest    = "region",
         help    = "Region to copy data from (default *)",
-        default ="*"
+        default = "*"
     )
     parser.add_argument(
         "-sb", 
         "--source-bucket",
-        dest    ="src_bucket",
+        dest    = "src_bucket",
         help    = "S3 Bucket name to copy data from (default *)",
-        default ="*"
+        default = "*"
     )
 
     # Add verbosity flag

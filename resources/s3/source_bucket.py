@@ -1,5 +1,5 @@
 SOURCE_BUCKET_POLICY_TEMPLATE = {
-    "Sid": "BatchOperationSourceObjectGet",
+    "Sid": "CloudCopyCat-SourceObjectGet",
     "Effect": "Allow",
     "Principal": {
         "AWS": [] ## to be filled in
