@@ -2,14 +2,13 @@ import json, copy
 from botocore.exceptions import ClientError
 
 
-## Returns list of all buckets to copy, and dict of {region => bucket names list}
+## Returns dict of {region => {"buckets" => bucket names list}, {"kms" => key IDs list}}
 ## If region == "*", dict keys are all regions containing buckets
-def get_buckets(session, region):
+def get_src_buckets(session, region):
     client = session.client("s3")
     bucket_names = [b["Name"] for b in client.list_buckets()["Buckets"]]
-
-    all_buckets = []
-    bucket_dict = {}
+    
+    region_dict = {}
     for bucket_name in bucket_names:
         bucket_region = client.get_bucket_location(
             Bucket = bucket_name
@@ -19,13 +18,29 @@ def get_buckets(session, region):
             ## https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_bucket_location.html
             bucket_region = "us-east-1"
 
-        if region == bucket_region or region == "*":
-            if bucket_region in bucket_dict:
-                bucket_dict[bucket_region].append(bucket_name)
-            else:
-                bucket_dict[bucket_region] = [bucket_name]
-            all_buckets.append(bucket_name)
-    return (all_buckets, bucket_dict)
+        bucket_encryption = client.get_bucket_encryption(
+            Bucket = bucket_name
+        )["ServerSideEncryptionConfiguration"]["Rules"][0]["ApplyServerSideEncryptionByDefault"]
+
+        ## ignore buckets in regions we don't care about
+        if region != bucket_region and region != "*":
+            continue
+
+        ## keep track of buckets in a given region
+        if bucket_region in region_dict:
+            region_dict[bucket_region]["buckets"].append(bucket_name)
+        else:
+            region_dict[bucket_region] = {"buckets": [bucket_name], "kms": []}
+
+        ## keep track of kms key IDs in a given region
+        if bucket_encryption["SSEAlgorithm"] == "aws:kms":
+            kms_arn = bucket_encryption["KMSMasterKeyID"]
+            region_dict[bucket_region]["kms"].append(kms_arn)
+
+    ## ensure we don't have duplicate kms IDs
+    for region in region_dict.keys():
+        region_dict[region]["kms"] = list(set(region_dict[region]["kms"]))
+    return region_dict
 
 
 ## Enables bucket versioning for list of bucket names
@@ -44,7 +59,7 @@ def enable_bucket_versioning(session, bucket_names):
 
 ## Create destination bucket for copied data and CloudCopyCat config data
 ## Bucket is KMS encrypted, versioning enabled, events go to EventBridge default bus
-def create_bucket(session, kms_arn, bucket_name):
+def create_dest_bucket(session, kms_arn, bucket_name):
     region     = session.region_name
     client     = session.client("s3")
 
@@ -137,19 +152,16 @@ def generate_src_bucket_policies(session, src_buckets, batch_copy_role_arn, reve
         policy = get_bucket_policy(session, bucket)
         statements = policy["Statement"]
         if revert:
-            statements = [s for s in statements if "CloudCopyCat" not in s["Sid"]]
-            policy["Statement"] = statements
+            for statement in statements:
+                if "Sid" in statement and "CloudCopyCat" in statement["Sid"]:
+                    statements.remove(statement)
         else:
             template["Principal"]["AWS"] = batch_copy_role_arn
             template["Resource"] = src_arns[idx]
             statements.append(
                 template
             )
-            policy["Statement"] = statements
-            #if idx <= 1: print(bucket, policy)
         policies.append(policy)
-        if idx <= 2: print("\n", policies)
-    #print(policies[0])
     return policies
 
 
@@ -162,8 +174,6 @@ def update_src_bucket_policies(src_session, src_buckets, batch_copy_role_arn, re
                 Bucket = bucket
             )
         else:
-            print(bucket)
-         #   print(src_bucket_policies[idx])
             client.put_bucket_policy(
                 Bucket = bucket,
                 Policy = json.dumps(src_bucket_policies[idx])
@@ -219,20 +229,20 @@ def enable_s3_replication(session, src_buckets, dest_account_id, dest_bucket_nam
                             "Prefix": ""
                         },
                         "Status": "Enabled",
-                        # "SourceSelectionCriteria": {
-                        #     "SseKmsEncryptedObjects": {
-                        #         "Status": "Enabled" ## TODO enable this
-                        #     }
-                        # },
+                        "SourceSelectionCriteria": {
+                            "SseKmsEncryptedObjects": {
+                                "Status": "Enabled"
+                            }
+                        },
                         "Destination": {
                             "Bucket": f"arn:aws:s3:::{dest_bucket_name}",
                             "Account": dest_account_id,
                             "AccessControlTranslation": {
                                 "Owner": "Destination"
                             },
-                            # "EncryptionConfiguration": {
-                            #     "ReplicaKmsKeyID": dest_kms_arn ## TODO uncomment this
-                            # }
+                            "EncryptionConfiguration": {
+                                "ReplicaKmsKeyID": dest_kms_arn
+                            }
                         },
                         "DeleteMarkerReplication": {
                             "Status": "Disabled"

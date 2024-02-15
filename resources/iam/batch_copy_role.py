@@ -29,7 +29,7 @@ BATCH_COPY_IAM_POLICY_TEMPLATE = {
       "Resource": "" ## to be filled in at deployment time
     },
     {
-      "Sid": "AllowKMSUsage",
+      "Sid": "AllowDestKMSUsage",
       "Effect": "Allow",
       "Action": [
           "kms:Encrypt",
@@ -37,6 +37,14 @@ BATCH_COPY_IAM_POLICY_TEMPLATE = {
           "kms:GenerateDataKey*"
 		],
       "Resource": "" ## to be filled in at deployment time
+    },
+    {
+      "Sid": "AllowSourceKMSUsage",
+      "Effect": "Allow",
+      "Action": [
+          "kms:Decrypt"
+		],
+      "Resource": [] ## to be filled in at deployment time
     }
   ]
 }

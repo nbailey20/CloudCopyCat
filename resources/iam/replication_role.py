@@ -7,7 +7,7 @@ REPLICATION_IAM_POLICY_TEMPLATE = {
 				"s3:*"
 			],
 			"Effect": "Allow",
-			"Resource": [] ## to be filled in at deployment time
+			"Resource": "" ## to be filled in at deployment time
 		},
 		{
 			"Action": [
@@ -16,7 +16,7 @@ REPLICATION_IAM_POLICY_TEMPLATE = {
 				"s3:*"
 			],
 			"Effect": "Allow",
-			"Resource": [] ## to be filled in at deployment time
+			"Resource": "" ## to be filled in at deployment time
 		},
 		{
 			"Action": [
@@ -27,15 +27,23 @@ REPLICATION_IAM_POLICY_TEMPLATE = {
 				"s3:*"
 			],
 			"Effect": "Allow",
-			"Resource": [] ## to be filled in at deployment time
+			"Resource": "" ## to be filled in at deployment time
 		},
-    {
-      "Action": [
-          "kms:*" ## fine tune this
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    }
+		{
+			"Action": [
+				"kms:Encrypt",
+                "kms:GenerateDataKey*"
+			],
+			"Effect": "Allow",
+			"Resource": "" ## to be filled in at deployment time
+		},
+        {
+			"Action": [
+				"kms:Decrypt"
+			],
+			"Effect": "Allow",
+			"Resource": "" ## to be filled in at deployment time
+		}
 	]
 }
 

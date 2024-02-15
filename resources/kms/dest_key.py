@@ -1,4 +1,4 @@
-KMS_POLICY_TEMPLATE = {
+DEST_KMS_POLICY_TEMPLATE = {
     "Version": "2012-10-17",
     "Id": "key-default-1",
     "Statement": [
