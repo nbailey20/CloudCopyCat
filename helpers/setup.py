@@ -1,5 +1,7 @@
 import time
 
+from classes.deployment import CloudCopyCatDeployment
+
 from helpers.config import LAMBDA_STATE_FOLDER, LAMBDA_STATE_FILE_NAME
 from helpers.config import LAMBDA_ROLE_NAME, REPLICATION_ROLE_NAME, BATCH_COPY_ROLE_NAME
 
@@ -42,17 +44,18 @@ def create_resources(args):
 
     ## need to use us-east-1 to list all buckets
     src_session = create_session(args.src_profile)
-    dest_session = create_session(args.dest_profile, region=args.region)
     src_region_dict = get_src_buckets(src_session, args.region)
     num_regions = len(src_region_dict.keys())
 
+    ## create keys in every region first, all ARNs needed for global IAM policy
+    dest_kms_dict = {"all_arn": []}
     for region in src_region_dict.keys():
         src_session = create_session(args.src_profile, region=region)
+        dest_session = create_session(args.dest_profile, region=region)
         dest_bucket = args.dest_bucket
         if num_regions > 1:
             dest_bucket = f"{dest_bucket}-{region}"
         src_buckets = src_region_dict[region]["buckets"]
-        src_kms_arns = src_region_dict[region]["kms"]
 
         ## type(kms) == {"arn": str, "id": str}
         kms = create_dest_key(
@@ -62,28 +65,45 @@ def create_resources(args):
                 src_buckets,
                 dest_bucket
             )
+        dest_kms_dict["all_arn"].append(kms["arn"])
+        dest_kms_dict[region] = kms
 
-        ## type(roles) == {rolename => str}
-        roles = create_iam_roles(
-                    src_session,
-                    dest_session,
-                    src_buckets,
-                    src_kms_arns,
-                    dest_account_id,
-                    dest_bucket,
-                    kms["arn"]
-                )
-        ## ensure roles are fully created before proceeding
-        time.sleep(10)
+    all_src_kms_arns = []
+    all_dest_buckets = []
+    for region in src_region_dict.keys():
+        all_src_kms_arns += src_region_dict[region]["kms"]
+    ## Create roles once for all regions
+    ## type(roles) == {rolename => role ARN str}
+    roles = create_iam_roles(
+                src_session,
+                dest_session,
+                src_buckets,
+                all_src_kms_arns, ## TODO if this is empty, remove IAM statement
+                dest_account_id,
+                dest_bucket,
+                dest_kms_dict["all_arn"]
+            )
+    ## ensure roles are fully created before proceeding
+    time.sleep(10)
+
+
+    for region in src_region_dict.keys():
+        src_session = create_session(args.src_profile, region=region)
+        dest_session = create_session(args.dest_profile, region=region)
+        dest_bucket = args.dest_bucket
+        if num_regions > 1:
+            dest_bucket = f"{dest_bucket}-{region}"
+        src_buckets = src_region_dict[region]["buckets"]
+        src_kms_arns = src_region_dict[region]["kms"]
 
         create_sns_topic(
             dest_session,
-            kms["id"],
+            dest_kms_dict[region]["id"],
             args.email
         )
         create_dest_bucket(
             dest_session,
-            kms["arn"],
+            dest_kms_dict[region]["arn"],
             dest_bucket
         )
         create_state_object(
@@ -116,7 +136,7 @@ def create_resources(args):
         create_ssm_params(
             dest_session,
             ssm_params,
-            kms["id"]
+            dest_kms_dict[region]["id"]
         )
 
         ## type(lambda_arn) == str
@@ -124,7 +144,7 @@ def create_resources(args):
             dest_session,
             roles[LAMBDA_ROLE_NAME],
             dest_bucket,
-            kms["arn"]
+            dest_kms_dict[region]["arn"]
         )
         ## lambda needs to be created before batch replication occurs
         time.sleep(20)
@@ -143,7 +163,7 @@ def create_resources(args):
 
         update_src_keys(
             src_session,
-            src_kms_arns,
+            src_region_dict[region]["kms"],
             roles[BATCH_COPY_ROLE_NAME]
         )
 
@@ -162,7 +182,7 @@ def create_resources(args):
             dest_account_id,
             dest_bucket,
             roles[REPLICATION_ROLE_NAME],
-            kms["arn"]
+            dest_kms_dict[region]["arn"]
         )
         create_batch_replication_jobs(
             src_session,
@@ -171,6 +191,6 @@ def create_resources(args):
             dest_account_id,
             dest_bucket,
             roles[REPLICATION_ROLE_NAME],
-            kms["arn"]
+            dest_kms_dict[region]["arn"]
         )
     return

@@ -1,0 +1,112 @@
+state is class with service subclasses as attributes
+
+
+classes all implement same core methods - create/delete
+setup.py iterates over list of class names
+new instance of class is created
+
+decorator to check dependency resources are created before creating
+
+Deployer class takes list of subclasses to instantiate as attributes - SrcKms, SrcBuckets, etc
+state aggregates .complete attribute of subclasses to indicate if desired state has been reached
+subclasses have 'complete' attribute
+
+class Deployer(cls_list):
+
+    __init__:
+        self.complete = False
+        for c in self.cls_list:
+            c_name = c(__name__)
+            self.c_name = c()
+            if not self.c_name.complete:
+                return
+        self.complete = True
+
+
+
+
+class Kms(Service):
+    __init__:
+        self.complete = False
+        self.client = session.client("kms")
+
+
+class Service():
+    __init__(self, session, svc_name):
+        self.complete = False
+        self.client = session.client(svc_name)
+        self.methods
+
+    api_call(self, method, **kwargs):
+        try:
+            res = self.client["method"](**kwargs)
+            return res
+        except:
+            error
+    @staticmember
+    generate_policy(self, template, values)
+
+
+
+class ApiCall():
+    __init__(client, method=None, method_args=None, outputs=None):
+        res = client.method(method_args)
+        return res[outputs]
+
+
+class DoubleApiCall(ApiCall):
+    ## pass output from call 1 as kwarg for call 2
+    ## return output from call 2
+
+
+def getResourceFactory(client, method, resource_params=None, output):
+    def getResource():
+        res = ApiCall(client, method=method, method_args=resource_params, outputs=output)
+        return res
+    
+    return getResource
+
+
+def getClientFactory(profile, service, region):
+    def getClient():
+        session = boto3.Session(profile_name=profile, region_name=region)
+        client = session.client(service)
+        return client
+    return getClient
+
+import state
+
+all_resources = [
+    {
+        "name": "src_kms_key",
+        "client": getClient(src_session, "kms", region),
+        "method": "describe_key",
+        "
+    }
+]
+for resource in all_resources:
+    r_name = resource["name"]
+    r_arn = getResource(resource["client"])
+
+
+@checkfordependencies
+class Resource():
+    init(self, describe_api=None, create_api=None, delete_api=None):
+        self.describe_api = describe_api
+        self.create_api = create_api
+        self.delete_api = delete_api
+        self.arn
+        self.resource_configurations = {} ##policy, replication config, etc
+
+
+kms_key = Resource(
+    describe_api = ApiCall(client, method="describe_key", method_args={"KeyId":})
+)
+
+Deployment Class consists of Region classes + state, (everything for a single region)
+which consist of Service classes + state + order to execute (IAM service only in first region), (everything for a single service)
+which consist of Resource classes + state + order to execute, (everything for a single ARN)
+which consist of ApiCall classes + state + order to execute
+
+Resource = ApiCall list + ARN + resource_configurations
+ARN + resource_configurations == "state"

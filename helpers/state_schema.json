@@ -1,0 +1,211 @@
+{
+    "src_kms": {
+        "key_arn": {
+            "all": [],
+            "us-east-1": [],
+            ...
+        },
+        "key_policy": {
+            "us-east-1": {
+                "key_arn1": "key_policy1",
+                ...
+            }
+        },
+        "status": {
+            "key_policy": {
+                "us-east-1": {
+                    "complete": ["key_arn1",],
+                    "incomplete": ["key_arn2",]
+                }
+                ...
+            }
+        }
+    },
+    "src_s3": {
+        "bucket_arn": {
+            "all": [],
+            "us-east-1": [],
+            ...
+        },
+        "status": {
+            "bucket_policy": {
+                "us-east-1": {
+                    "complete": ["bucket_arn1",],
+                    "incomplete": ["bucket_arn2",]
+                }
+                ...
+            },
+            "bucket_versioning": {
+                "us-east-1": {
+                    "complete": ["bucket_arn1",],
+                    "incomplete": ["bucket_arn2",]
+                }
+                ...
+            },
+            "bucket_replication": {
+                "us-east-1": {
+                    "complete": ["bucket_arn1",],
+                    "incomplete": ["bucket_arn2",]
+                }
+                ...
+            },
+            "batch_replication": {
+                "us-east-1": {
+                    "complete": ["bucket_arn1",],
+                    "incomplete": ["bucket_arn2",]
+                }
+                ...
+            }
+        }
+    },
+
+    "dest_eventbridge": {
+        "rule_arn": {
+            "us-east-1": "",
+            ...
+        },
+        "status": {
+            "rule": {
+                "us-east-1": {
+                    "complete": true
+                }
+                ...
+            }
+        }
+    }
+    "dest_iam": {
+        "role_arn": {
+            "role_name1": "role_arn1",
+            "role_name2": "role_arn2"
+        },
+        "policy_arn": {
+            "policy_name1": "policy_arn1",
+            "policy_name2": "policy_arn2"
+        },
+        "status": {
+            "role": {
+                "complete": ["role_arn1",],
+                "incomplete": ["role_arn2",]
+            },
+            "policy": {
+                "complete": ["policy_arn1",],
+                "incomplete": ["policy_arn2",]
+            },
+            "policy_attachment": {
+                "complete": ["role_arn1",],
+                "incomplete": ["role_arn2",]
+            }
+        }
+    },
+    "dest_kms": {
+        "key_arn": {
+            "all": [],
+            "us-east-1": "",
+            ...
+        },
+        "status": {
+            "key": {
+                "us-east-1": {
+                    "complete": true
+                }
+                ...
+            },
+            "alias": {
+                "us-east-1": {
+                    "complete": true
+                }
+                ...
+            }
+        }
+    },
+    "dest_lambda": {
+        "function_arn": {
+            "us-east-1": "",
+            ...
+        },
+        "status": {
+            "function": {
+                "us-east-1": {
+                    "complete": true
+                }
+                ...
+            },
+            "permission": {
+                "us-east-1": {
+                    "complete": true
+                }
+            }
+        }
+    },
+    "dest_sns": {
+        "topic_arn": {
+            "us-east-1": "",
+            ...
+        },
+        "subscription_target_list": {
+            "us-east-1": [],
+            ...
+        },
+        "status": {
+            "topic": {
+                "us-east-1": {
+                    "complete": true
+                }
+                ...
+            },
+            "subscription": {
+                "us-east-1": {
+                    "complete": ["email1",],
+                    "incomplete": ["email2",]
+                }
+                ...
+            }
+        }
+    },
+    "dest_ssm": {
+        "parameter_arn": {
+            "us-east-1": ["param_arn1",],
+            ...
+        },
+        "status": {
+            "parameters": {
+                "us-east-1": {
+                    "complete": ["param_arn1",],
+                    "incomplete": ["param_arn2",]
+                }
+                ...
+            }
+        }
+    },
+    "dest_s3": {
+        "bucket_arn": {
+            "all": [],
+            "us-east-1": "bucket_arn1",
+            ...
+        },
+        "state_object_arn": {
+            "us-east-1": "state_object_arn1",
+            ...
+        },
+        "status": {
+            "bucket": {
+                "us-east-1": {
+                    "complete": true
+                }
+                ...
+            },
+            "bucket_policy": {
+                "us-east-1": {
+                    "complete": true
+                }
+                ...
+            },
+            "state_object": {
+                "us-east-1": {
+                    "complete": true
+                }
+                ...
+            }
+        }
+    }
+}

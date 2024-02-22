@@ -2,7 +2,9 @@
 
 import zipfile, os
 
-from helpers.cl_input import parse_args
+from helpers.arguments.parse import parse_args
+from helpers.arguments.validate import args_are_valid
+from helpers.state import get_deployment_state
 from helpers.setup import create_resources
 from helpers.remove import delete_resources
 
@@ -17,6 +19,11 @@ def build_zips():
 
 def main():
     args = parse_args()
+    if not args_are_valid(args):
+        return
+    
+    #state = get_deployment_state(args)
+
     if args.remove:
         print("Deleting resources")
         delete_resources(args)

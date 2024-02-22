@@ -11,58 +11,60 @@ from resources.iam.batch_copy_role import BATCH_COPY_IAM_POLICY_TEMPLATE, BATCH_
 from modules.sts import get_account_id
 
 
-def generate_lambda_policy(dest_account_id, dest_bucket_name, dest_kms_arn):
+def generate_lambda_policy(dest_account_id, dest_bucket_name, dest_kms_arns):
     LAMBDA_IAM_POLICY_TEMPLATE["Statement"][0]["Resource"] = f"arn:aws:logs:*:{dest_account_id}:*"
     LAMBDA_IAM_POLICY_TEMPLATE["Statement"][1]["Resource"] = f"arn:aws:logs:*:{dest_account_id}:log-group:/aws/lambda*"
     LAMBDA_IAM_POLICY_TEMPLATE["Statement"][3]["Resource"] = f"arn:aws:iam::{dest_account_id}:role/{BATCH_COPY_ROLE_NAME}"
-    LAMBDA_IAM_POLICY_TEMPLATE["Statement"][4]["Resource"] = dest_kms_arn
+    LAMBDA_IAM_POLICY_TEMPLATE["Statement"][4]["Resource"] = dest_kms_arns
     LAMBDA_IAM_POLICY_TEMPLATE["Statement"][5]["Resource"] = f"arn:aws:ssm:*:{dest_account_id}:parameter/CloudCopyCat-*"
     LAMBDA_IAM_POLICY_TEMPLATE["Statement"][6]["Resource"] = f"arn:aws:s3:::{dest_bucket_name}/{LAMBDA_STATE_FOLDER}/*"
     return json.dumps(LAMBDA_IAM_POLICY_TEMPLATE)
 
-def generate_replication_policy(src_buckets, src_kms_arns, dest_bucket_name, dest_kms_arn):
+def generate_replication_policy(src_buckets, src_kms_arns, dest_bucket_name, dest_kms_arns):
     src_bucket_arns = [f"arn:aws:s3:::{b}" for b in src_buckets]
     src_object_arns = [f"{sba}/*" for sba in src_bucket_arns]
-    dest_object_arn = f"arn:aws:s3:::{dest_bucket_name}/*"
+    dest_bucket_arn = f"arn:aws:s3:::{dest_bucket_name}"
+    dest_object_arn = f"{dest_bucket_arn}/*"
     REPLICATION_IAM_POLICY_TEMPLATE["Statement"][0]["Resource"] = src_object_arns
     REPLICATION_IAM_POLICY_TEMPLATE["Statement"][1]["Resource"] = src_bucket_arns
-    REPLICATION_IAM_POLICY_TEMPLATE["Statement"][2]["Resource"] = dest_object_arn,
-    REPLICATION_IAM_POLICY_TEMPLATE["Statement"][3]["Resource"] = dest_kms_arn
+    REPLICATION_IAM_POLICY_TEMPLATE["Statement"][2]["Resource"] = [dest_object_arn, dest_bucket_arn]
+    REPLICATION_IAM_POLICY_TEMPLATE["Statement"][3]["Resource"] = dest_kms_arns
     REPLICATION_IAM_POLICY_TEMPLATE["Statement"][4]["Resource"] = src_kms_arns
+    print(REPLICATION_IAM_POLICY_TEMPLATE)
     return json.dumps(REPLICATION_IAM_POLICY_TEMPLATE)
 
-def generate_batch_copy_policy(src_buckets, src_kms_arns, dest_bucket_name, dest_kms_arn):
+def generate_batch_copy_policy(src_buckets, src_kms_arns, dest_bucket_name, dest_kms_arns):
     src_bucket_arns = [f"arn:aws:s3:::{b}/*" for b in src_buckets]
     dest_bucket_arn = f"arn:aws:s3:::{dest_bucket_name}/*"
     BATCH_COPY_IAM_POLICY_TEMPLATE["Statement"][0]["Resource"] = src_bucket_arns + [dest_bucket_arn]
     BATCH_COPY_IAM_POLICY_TEMPLATE["Statement"][1]["Resource"] = dest_bucket_arn
-    BATCH_COPY_IAM_POLICY_TEMPLATE["Statement"][2]["Resource"] = dest_kms_arn
+    BATCH_COPY_IAM_POLICY_TEMPLATE["Statement"][2]["Resource"] = dest_kms_arns
     BATCH_COPY_IAM_POLICY_TEMPLATE["Statement"][3]["Resource"] = src_kms_arns
     return json.dumps(BATCH_COPY_IAM_POLICY_TEMPLATE)
 
 
 ## Create IAM roles and attached policies for Lambda and Batch Copy jobs
-def create_iam_roles(src_session, dest_session, src_buckets, src_kms_arns, dest_account_id, dest_bucket_name, dest_kms_arn):
+def create_iam_roles(src_session, dest_session, src_buckets, src_kms_arns, dest_account_id, dest_bucket_name, dest_kms_arns):
     roles_list = [
         {
             "RoleName":    LAMBDA_ROLE_NAME,
             "PolicyName":  LAMBDA_POLICY_NAME,
             "TrustPolicy": json.dumps(LAMBDA_TRUST_POLICY),
-            "IamPolicy":   generate_lambda_policy(dest_account_id, dest_bucket_name, dest_kms_arn),
+            "IamPolicy":   generate_lambda_policy(dest_account_id, dest_bucket_name, dest_kms_arns),
             "ApiClient":   dest_session.client("iam")
         },
         {
             "RoleName":    REPLICATION_ROLE_NAME,
             "PolicyName":  REPLICATION_POLICY_NAME,
             "TrustPolicy": json.dumps(REPLICATION_TRUST_POLICY),
-            "IamPolicy":   generate_replication_policy(src_buckets, src_kms_arns, dest_bucket_name, dest_kms_arn),
+            "IamPolicy":   generate_replication_policy(src_buckets, src_kms_arns, dest_bucket_name, dest_kms_arns),
             "ApiClient":   src_session.client("iam")
         },
         {
             "RoleName":    BATCH_COPY_ROLE_NAME,
             "PolicyName":  BATCH_COPY_POLICY_NAME,
             "TrustPolicy": json.dumps(BATCH_COPY_TRUST_POLICY),
-            "IamPolicy":   generate_batch_copy_policy(src_buckets, src_kms_arns, dest_bucket_name, dest_kms_arn),
+            "IamPolicy":   generate_batch_copy_policy(src_buckets, src_kms_arns, dest_bucket_name, dest_kms_arns),
             "ApiClient":   dest_session.client("iam")
         }
     ]
@@ -112,14 +114,17 @@ def delete_iam_roles(src_session, dest_session):
     ]
 
     for role in roles_list:
-        role["ApiClient"].detach_role_policy(
-            RoleName  = role["RoleName"],
-            PolicyArn = role["PolicyArn"]
-        )
-        role["ApiClient"].delete_role(
-            RoleName = role["RoleName"]
-        )
-        role["ApiClient"].delete_policy(
-            PolicyArn = role["PolicyArn"]
-        )
+        try:
+            role["ApiClient"].detach_role_policy(
+                RoleName  = role["RoleName"],
+                PolicyArn = role["PolicyArn"]
+            )
+            role["ApiClient"].delete_role(
+                RoleName = role["RoleName"]
+            )
+            role["ApiClient"].delete_policy(
+                PolicyArn = role["PolicyArn"]
+            )
+        except:
+            continue
     return

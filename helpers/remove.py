@@ -11,20 +11,24 @@ from modules.ssm_parameter import delete_ssm_params
 
 def delete_resources(args):
     src_session = create_session(args.src_profile)
-    dest_session = create_session(args.dest_profile, region=args.region)
+    dest_session = create_session(args.dest_profile)
     source_region_dict = get_src_buckets(src_session, args.region)
+    print(source_region_dict)
     ssm_params = [
         "CloudCopyCat-Source-Account-ID",
         "CloudCopyCat-State-File-Path",
         "CloudCopyCat-Batch-Copy-Role-Arn"
     ]
 
+    delete_iam_roles(src_session, dest_session)
     for region in source_region_dict.keys():
+        src_session = create_session(args.src_profile, region=region)
+        dest_session = create_session(args.dest_profile, region=region)
+        print(region)
         delete_eb_rule(dest_session)
         delete_lambda(dest_session)
         delete_ssm_params(dest_session, ssm_params)
         delete_sns_topic(dest_session)
-        delete_iam_roles(src_session, dest_session)
         delete_dest_key(dest_session) ## don't delete or can't decrypt objects!
 
         src_session = create_session(args.src_profile, region=region)
