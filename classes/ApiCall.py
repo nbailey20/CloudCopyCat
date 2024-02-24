@@ -1,49 +1,24 @@
 from botocore.exceptions import ClientError
+from helpers.core import get_dict_value_from_expression
 
 class ApiCall():
-    ## Recurse through API response JSON
-    ## to collect value(s) at output path
-    def _get_output(self, api_res, output_path):
-        if not output_path:
-            return None
-        if len(output_path) == 1:
-            return api_res[output_path[0]]
-        if output_path[0] == "*":
-            return [self._get_output(api_sub_res, output_path[1:]) 
-                    for api_sub_res in api_res]
-        else:
-            return self._get_output(api_res[output_path[0]], output_path[1:])
+    def set_client(self, client):
+        self.client = client
 
 
-    ## Set self.output to be dict containing output_key => output_values
-    def _set_outputs(self, api_res, output_keys):
-        if not output_keys:
-            return
-
-        self.output = {}
-        for key in output_keys:
-            output_path = output_keys[key].split("/")
-            self.output[key] = self._get_output(api_res, output_path)
-
-
-    ## Make API call to method with method_args
-    ## Outputs dict determines which values from API response are returned
-    ##  {name of output => path in API response where value is found}
-    ##   Nested JSON values are declared with '/'
-    ##   E.g. {"bucket_owner": "Owner/DisplayName"}
-    ##   All values in list are declared with '*'
-    ##   E.g. {"all_buckets": "Buckets/*/Name"}
-    def __init__(self, client, method=None, method_args=None, output_keys=None):
-        self.output = None
-
-        if not method:
-            print("No method provided, skipping")
-            return
+    def execute(self, args: dict[str]=None):
         try:
-            method_to_call = getattr(client, method)
+            method_to_call = getattr(self.client, self.method)
         except:
-            print(f"Action {method} not known for client, skipping")
+            print(f"Action {self.method} not known for client, skipping")
             return
+        
+        ## allow custom method_args for execution
+        ## takes precedence over saved args
+        ## used for method_args rendered at runtime
+        method_args = self.method_args
+        if args:
+            method_args = args
 
         try:
             api_res = None
@@ -54,15 +29,60 @@ class ApiCall():
 
         except ClientError as e:
             if e.response['Error'] and e.response['Error']['Code'] in ['AccessDenied', 'AccessDeniedException']:
-                print(f'CloudCopyCat does not have permission to perform {method}, skipping')
+                self.exception = "AccessDenied"
+                print(f'CloudCopyCat does not have permission to perform {method_to_call}, skipping')
             elif e.response['Error'] and e.response['Error']['Code'] in ['NotFoundException', 'NoSuchEntity']:
+                self.exception = "NotFound"
                 print(f'Resource not found exception received from AWS client: {e}')
             else:
+                self.exception = "ClientError"
                 print(f'AWS client error: {e}')
             return
 
         except Exception as e:
+            self.exception = "UnknownError"
             print(f'Unknown API error, exiting: {e}')
             return
+        
+        self._set_outputs(api_res, self.expected_output)
+        return api_res
 
-        self._set_outputs(api_res, output_keys)
+
+    ## Set self.output to be dict containing output_key => output_values
+    def _set_outputs(self, api_res: dict[str], output_keys: dict[str]):
+        if not output_keys:
+            return
+
+        self.output = {}
+        for key in output_keys:
+            output_expression = output_keys[key].split("/")
+            self.output[key] = get_dict_value_from_expression(api_res, output_expression)
+
+
+    ## Make API call to method with method_args
+    ## Outputs dict determines which values from API response are returned
+    ##  {name of output => path in API response where value is found}
+    ##   Nested JSON values are declared with '/'
+    ##     E.g. {"bucket_owner": "Owner/DisplayName"}
+    ##   All values in list are declared with '*'
+    ##     E.g. {"all_buckets": "Buckets/*/Name"}
+    ##   Specific search terms for lists are declared with '?' and '~term' in next subfield
+    ##     E.g. {"specific_bucket": "Buckets/?/Name~CloudCopyCat"}
+    ##   Referencing value in Resource.state is declared with '$'
+    ##     E.g. {"TopicArn": "$dest_sns_topic/arn"} - used for method_args
+    def __init__(
+            self,
+            client=None,
+            method: str=None,
+            method_args: dict[str]=None,
+            output_keys: dict[str]=None
+        ):
+        self.client = client
+        self.method = method
+        self.method_args = method_args
+        self.expected_output = output_keys
+        self.output = None
+        self.exception = None
+
+        if not method:
+            print("No method provided to ApiCall")

@@ -2,26 +2,17 @@ import sys
 sys.path.append("..")
 
 import boto3
+from testing.evaluator import eval_response
 from classes.ApiCall import ApiCall
-
-def eval_response(func):
-    def wrapper(*args, **kwargs):
-        print(f"\nTesting function {func.__name__}")
-        res = func(*args, **kwargs)
-        if res == False:
-            print("Test Failed.")
-        else:
-            print("Test succeeded.")
-        return res
-    return wrapper
-
 
 
 @eval_response
 def test_no_method(client):
-    a = ApiCall(client).output
-    ## if no method passed, class should be None
-    if not a:
+    a = ApiCall(client)
+    a.execute()
+    out = a.output
+    ## if no method passed, output should be None
+    if not out:
         return True
     return False
 
@@ -30,51 +21,83 @@ def test_no_method(client):
 def test_no_args_list_function(client):
     a = ApiCall(
             client,
-            method="list_buckets",
-            output_keys={"all_buckets": "Buckets/*/Name"}
-        ).output
-    if "all_buckets" in a:
+            method="list_topics",
+            output_keys={"all_topics": "Topics/*/TopicArn"}
+        )
+    a.execute()
+    out = a.output
+    if "all_topics" in out:
         return True
     return False
 
 
 @eval_response
 def test_complete_example_single_output(client):
-    buckets = ApiCall(
-                client,
-                method="list_buckets",
-                output_keys={"all_buckets": "Buckets/*/Name"}
-            ).output["all_buckets"]
-    args = {"Bucket": buckets[0]}
     a = ApiCall(
-            client,
-            method="head_bucket",
-            method_args=args,
-            output_keys={"region": "ResponseMetadata/HTTPHeaders/x-amz-bucket-region"}
-        ).output
-    if "region" in a:
+                client,
+                method = "create_topic",
+                method_args = {"Name": "test-ccc-topic"},
+                output_keys = {"arn": "TopicArn"}
+            )
+    a.execute()
+    out = a.output
+    if "arn" in out and out["arn"].startswith("arn:aws:sns:"):
         return True
     return False
 
 
 @eval_response
 def test_complete_example_multiple_output(client):
-    buckets = ApiCall(
-                client,
-                method="list_buckets",
-                output_keys={"all_buckets": "Buckets/*/Name"}
-            ).output["all_buckets"]
-    args = {"Bucket": buckets[0]}
     a = ApiCall(
-            client,
-            method="head_bucket",
-            method_args=args,
-            output_keys={
-                "region": "ResponseMetadata/HTTPHeaders/x-amz-bucket-region",
-                "statuscode": "ResponseMetadata/HTTPStatusCode"
-            }
-        ).output
-    if "region" in a and "statuscode" in a:
+                client,
+                method="list_topics",
+                output_keys={
+                    "all_topics": "Topics/*/TopicArn"
+                }
+            )
+    a.execute()
+    out = a.output
+    if "all_topics" not in out:
+        return False
+    if len(out["all_topics"]) < 1:
+        return False
+
+    first_topic = out["all_topics"][0]
+    a = ApiCall(
+                client,
+                method = "get_topic_attributes",
+                method_args = {"TopicArn": first_topic},
+                output_keys = {
+                    "arn": "Topics/*/TopicArn",
+                    "statuscode": "ResponseMetadata/HTTPStatusCode"
+                }
+            )
+    a.execute()
+    out = a.output
+    if "arn" in out and "statuscode" in out:
+        return True
+    return False
+
+
+@eval_response
+def test_complete_example_no_output(client):
+    a = ApiCall(
+                client,
+                method="list_topics",
+                output_keys={
+                    "arn": "Topics/?/TopicArn~test-ccc-topic"
+                }
+            )
+    a.execute()
+    topic_arn = a.output["arn"]
+    a = ApiCall(
+                client,
+                method = "delete_topic",
+                method_args = {"TopicArn": topic_arn}
+            )
+    a.execute()
+    out = a.output
+    if out == None and not a.exception:
         return True
     return False
 
@@ -83,13 +106,16 @@ def test_complete_example_multiple_output(client):
 
 
 def run_tests():
-    client = boto3.client("s3")
+    client = boto3.client("sns")
     if all([
         test_no_method(client),
         test_no_args_list_function(client),
         test_complete_example_single_output(client),
-        test_complete_example_multiple_output(client)
+        test_complete_example_multiple_output(client),
+        test_complete_example_no_output(client)
     ]):
         print("\nAll ApiCall tests sucessfully passed.")
+    else:
+        print("\nSome tests failed for ApiCall")
     return
 
