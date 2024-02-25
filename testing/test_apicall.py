@@ -68,7 +68,7 @@ def test_complete_example_multiple_output(client):
                 method = "get_topic_attributes",
                 method_args = {"TopicArn": first_topic},
                 output_keys = {
-                    "arn": "Topics/*/TopicArn",
+                    "arn": "Attributes/TopicArn",
                     "statuscode": "ResponseMetadata/HTTPStatusCode"
                 }
             )
@@ -85,7 +85,7 @@ def test_complete_example_no_output(client):
                 client,
                 method="list_topics",
                 output_keys={
-                    "arn": "Topics/?/TopicArn~test-ccc-topic"
+                    "arn": "Topics/?/TopicArn~test-ccc-topic/TopicArn"
                 }
             )
     a.execute()

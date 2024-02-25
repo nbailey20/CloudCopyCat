@@ -1,11 +1,7 @@
 from botocore.exceptions import ClientError
-from helpers.core import get_dict_value_from_expression
+from helpers.core import get_value_from_expression
 
 class ApiCall():
-    def set_client(self, client):
-        self.client = client
-
-
     def execute(self, args: dict[str]=None):
         try:
             method_to_call = getattr(self.client, self.method)
@@ -26,7 +22,6 @@ class ApiCall():
                 api_res = method_to_call(**method_args)
             else:
                 api_res = method_to_call()
-
         except ClientError as e:
             if e.response['Error'] and e.response['Error']['Code'] in ['AccessDenied', 'AccessDeniedException']:
                 self.exception = "AccessDenied"
@@ -38,25 +33,26 @@ class ApiCall():
                 self.exception = "ClientError"
                 print(f'AWS client error: {e}')
             return
-
         except Exception as e:
             self.exception = "UnknownError"
             print(f'Unknown API error, exiting: {e}')
             return
-        
-        self._set_outputs(api_res, self.expected_output)
+
+        self._store_outputs(api_res, self.expected_output)
         return api_res
 
 
+    def set_client(self, client):
+        self.client = client
+
     ## Set self.output to be dict containing output_key => output_values
-    def _set_outputs(self, api_res: dict[str], output_keys: dict[str]):
+    def _store_outputs(self, api_res: dict[str], output_keys: dict[str]):
         if not output_keys:
             return
-
         self.output = {}
         for key in output_keys:
-            output_expression = output_keys[key].split("/")
-            self.output[key] = get_dict_value_from_expression(api_res, output_expression)
+            output_expression = output_keys[key]
+            self.output[key] = get_value_from_expression(api_res, output_expression, value_type="output")
 
 
     ## Make API call to method with method_args
@@ -68,8 +64,9 @@ class ApiCall():
     ##     E.g. {"all_buckets": "Buckets/*/Name"}
     ##   Specific search terms for lists are declared with '?' and '~term' in next subfield
     ##     E.g. {"specific_bucket": "Buckets/?/Name~CloudCopyCat"}
+    ## Method args dict can contain refs to objects in state when wrapped as a Resource
     ##   Referencing value in Resource.state is declared with '$'
-    ##     E.g. {"TopicArn": "$dest_sns_topic/arn"} - used for method_args
+    ##     E.g. {"TopicArn": "$dest_sns_topic/arn"}
     def __init__(
             self,
             client=None,
