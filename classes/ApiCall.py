@@ -32,11 +32,11 @@ class ApiCall():
             else:
                 self.exception = "ClientError"
                 print(f'AWS client error: {e}')
-            return
+            api_res = None
         except Exception as e:
             self.exception = "UnknownError"
             print(f'Unknown API error, exiting: {e}')
-            return
+            api_res = None
 
         self._store_outputs(api_res, self.expected_output)
         return api_res
@@ -52,7 +52,7 @@ class ApiCall():
         self.output = {}
         for key in output_keys:
             output_expression = output_keys[key]
-            self.output[key] = get_value_from_expression(api_res, output_expression, value_type="output")
+            self.output[key] = get_value_from_expression(api_res, output_expression)
 
 
     ## Make API call to method with method_args

@@ -1,3 +1,5 @@
+DESCRIPTION               = "Created by CloudCopyCat"
+
 SNS_TOPIC_NAME            = "CloudCopyCat-Notification-Topic"
 KMS_ALIAS_NAME            = "alias/CloudCopyCat-KMS-Key"
 
