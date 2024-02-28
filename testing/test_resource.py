@@ -72,15 +72,11 @@ def test_single_api_delete(client, name):
             method_args = {"TopicArn": topic_arn},
         )
     r = Resource(name, type="sns", client=client, describe_apis=(aList,), delete_apis=(aDelete,))
+    r.describe()
     r.delete()
 
-    a = ApiCall(
-            client,
-            method = "list_topics",
-            output_keys = {"arn": "Topics/?/TopicArn~test-ccc-topic/TopicArn"}
-        )
-    a.execute()
-    topic_arn = a.output["arn"]
+    aList.execute()
+    topic_arn = aList.output["arn"]
     if r.name in r.state and "arn" in r.state[r.name] and r.state[r.name]["arn"] == None:
         return True
     return False
@@ -122,13 +118,10 @@ def test_complete_example_working(client, name):
             delete_apis = (delete_topic,)
         )
     r.describe()
-    print(r.state)
     if r.state[r.name]["arn"]:
-        print(1)
         return False
     r.create()
     if not r.state[r.name]["arn"]:
-        print(2)
         return False
     r.delete()
     if r.state[r.name]["arn"]:
@@ -229,9 +222,9 @@ def run_tests():
         test_single_api_create(client, sns_resource_name),
         test_describe(client, sns_resource_name),
         test_single_api_delete(client, sns_resource_name),
-        # test_complete_example_working(client, sns_resource_name),
-        # test_complete_example_broken(client, sns_resource_name),
-        # test_complete_example_multiple_actions(client, sns_resource_name)
+        test_complete_example_working(client, sns_resource_name),
+        test_complete_example_broken(client, sns_resource_name),
+        test_complete_example_multiple_actions(client, sns_resource_name)
     ]):
         print("\nAll Resource tests sucessfully passed.")
     else:

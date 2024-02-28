@@ -22,7 +22,7 @@ def test_no_args_list_function(client):
     a = ApiCall(
             client,
             method="list_topics",
-            output_keys={"all_topics": "Topics/*/TopicArn"}
+            output_keys={"all_topics": "Topics/#all/TopicArn"}
         )
     a.execute()
     out = a.output
@@ -52,7 +52,7 @@ def test_complete_example_multiple_output(client):
                 client,
                 method="list_topics",
                 output_keys={
-                    "all_topics": "Topics/*/TopicArn"
+                    "all_topics": "Topics/#all/TopicArn"
                 }
             )
     a.execute()
