@@ -125,7 +125,7 @@ def test_multiple_resources_with_deps(profile):
                 "Sid": "testSns",
                 "Effect": "Allow",
                 "Action": "sns:*",
-                "Resource": "$src_snstest/arn"
+                "Resource": "$src_snstest/#all/arn"
             }
         ]
     })
@@ -188,7 +188,7 @@ def test_multiple_resources_with_deps(profile):
             )
     describe_topic = ApiCall(
                         method = "list_topics",
-                        output_keys = {"arn": "Topics/?/TopicArn~test-ccc-topicA"}
+                        output_keys = {"arn": "Topics/?/TopicArn~test-ccc-topicA/TopicArn"}
                     )
     delete_topic = ApiCall(
                         method = "delete_topic",
