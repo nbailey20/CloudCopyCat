@@ -7,7 +7,7 @@ REPLICATION_IAM_POLICY_TEMPLATE = {
 				"s3:*"
 			],
 			"Effect": "Allow",
-			"Resource": "" ## to be filled in at deployment time
+			"Resource": "$src_bucket/#all/object_arn"
 		},
 		{
 			"Action": [
@@ -16,7 +16,7 @@ REPLICATION_IAM_POLICY_TEMPLATE = {
 				"s3:*"
 			],
 			"Effect": "Allow",
-			"Resource": "" ## to be filled in at deployment time
+			"Resource": "$src_bucket/#all/arn"
 		},
 		{
 			"Action": [
@@ -27,7 +27,18 @@ REPLICATION_IAM_POLICY_TEMPLATE = {
 				"s3:*"
 			],
 			"Effect": "Allow",
-			"Resource": "" ## to be filled in at deployment time
+			"Resource": "$dest_bucket/#all/arn"
+		},
+        {
+			"Action": [
+				"s3:GetObject*",
+				"s3:PutObject*",
+				"s3:Replicate*",
+				"s3:ObjectOwnerOverrideToBucketOwner",
+				"s3:*"
+			],
+			"Effect": "Allow",
+			"Resource": "$dest_bucket/#all/object_arn"
 		},
 		{
 			"Action": [
@@ -35,14 +46,14 @@ REPLICATION_IAM_POLICY_TEMPLATE = {
                 "kms:GenerateDataKey*"
 			],
 			"Effect": "Allow",
-			"Resource": "" ## to be filled in at deployment time
+			"Resource": "$dest_kms_key/#all/arn"
 		},
         {
 			"Action": [
 				"kms:Decrypt"
 			],
 			"Effect": "Allow",
-			"Resource": "" ## to be filled in at deployment time
+			"Resource": "$src_kms_key/#all/arn"
 		}
 	]
 }

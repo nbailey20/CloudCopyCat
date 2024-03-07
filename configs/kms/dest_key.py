@@ -6,7 +6,7 @@ DEST_KMS_POLICY_TEMPLATE = {
             "Sid": "Enable IAM User Permissions",
             "Effect": "Allow",
             "Principal": {
-                "AWS": "" ## to be filled in at deployment time
+                "AWS": "arn:aws:iam::$dest_account:root"
             },
             "Action": "kms:*",
             "Resource": "*"
@@ -27,10 +27,10 @@ DEST_KMS_POLICY_TEMPLATE = {
             "Resource": "*",
             "Condition": {
                 "StringEquals": {
-                    "aws:SourceAccount":"" ## to be filled in at deployment time
+                    "aws:SourceAccount": ["$src_account"] ## maybe needed "$dest_account"]
                 },
                 "ArnLike": {
-                    "aws:SourceArn": [] ## to be filled in at deployment time
+                    "aws:SourceArn": [] ## filled in at deployment time"$src_bucket/#all/arn" ## maybe need destbucketarns
                 }
             }
         },
@@ -47,7 +47,7 @@ DEST_KMS_POLICY_TEMPLATE = {
             "Resource": "*",
             "Condition": {
                 "StringEquals": {
-                    "aws:PrincipalArn": "" ## to be filled in at deployment time
+                    "aws:PrincipalArn": "" ## to be filled in at deployment time to avoid cycle
                 }
             }
         }

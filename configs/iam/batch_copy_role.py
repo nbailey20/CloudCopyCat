@@ -12,7 +12,7 @@ BATCH_COPY_IAM_POLICY_TEMPLATE = {
         "s3:GetObjectVersionAcl",
         "s3:GetObjectVersionTagging"
       ],
-      "Resource": [] ## to be filled in at deployment time
+      "Resource": "$src_bucket/#all/object_arn"
     },
     {
       "Sid": "AllowBatchOperationDestinationObjectPut",
@@ -26,7 +26,7 @@ BATCH_COPY_IAM_POLICY_TEMPLATE = {
         "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": "" ## to be filled in at deployment time
+      "Resource": "$dest_bucket/#all/object_arn"
     },
     {
       "Sid": "AllowDestKMSUsage",
@@ -35,16 +35,16 @@ BATCH_COPY_IAM_POLICY_TEMPLATE = {
           "kms:Encrypt",
           "kms:Decrypt",
           "kms:GenerateDataKey*"
-		],
-      "Resource": "" ## to be filled in at deployment time
+        ],
+      "Resource": "$dest_kms_key/#all/arn"
     },
     {
       "Sid": "AllowSourceKMSUsage",
       "Effect": "Allow",
       "Action": [
           "kms:Decrypt"
-		],
-      "Resource": [] ## to be filled in at deployment time
+        ],
+      "Resource": "$src_kms_key/#all/arn"
     }
   ]
 }

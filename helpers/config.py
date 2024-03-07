@@ -1,7 +1,7 @@
 DESCRIPTION               = "Created by CloudCopyCat"
 
 SNS_TOPIC_NAME            = "CloudCopyCat-Notification-Topic"
-KMS_ALIAS_NAME            = "alias/CloudCopyCat-KMS-Key"
+KMS_ALIAS_NAME            = "CloudCopyCat-KMS-Key"
 
 LAMBDA_FUNCTION_NAME      = "CloudCopyCat-Lambda-Function"
 LAMBDA_RUNTIME            = "python3.9"

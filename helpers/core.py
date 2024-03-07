@@ -6,6 +6,76 @@ def create_session(profile_name, region="us-east-1"):
         region = "us-east-1"
     return boto3.Session(profile_name=profile_name, region_name=region)
 
+def get_account_id(profile_name):
+    if not profile_name:
+        return
+    session = create_session(profile_name)
+    account_id = session.client("sts").get_caller_identity()["Account"]
+    return account_id
+
+
+## Return 2 objects:
+##   1. State dict, region => bucket names in region
+##   2. List of all regions included in state
+def get_src_state(session, region_filter=None):
+    client = session.client("s3")
+    bucket_names = [b["Name"] for b in client.list_buckets()["Buckets"]]
+    
+    state = {}
+    regions = []
+    keys_seen = []
+    for bucket_name in bucket_names:
+        bucket_region = client.get_bucket_location(
+            Bucket = bucket_name
+        )["LocationConstraint"]
+        if not bucket_region:
+            ## buckets in east1 have null LocationConstraint value
+            ## https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_bucket_location.html
+            bucket_region = "us-east-1"
+
+        bucket_encryption = client.get_bucket_encryption(
+            Bucket = bucket_name
+        )["ServerSideEncryptionConfiguration"]["Rules"][0]["ApplyServerSideEncryptionByDefault"]
+
+        ## ignore buckets in regions we don't care about
+        if region_filter and region_filter != bucket_region:
+            continue
+
+        bucket_data = {
+            "name": bucket_name,
+            "arn": f"arn:aws:s3:::{bucket_name}",
+            "object_arn": f"arn:aws:s3:::{bucket_name}/*",
+            "type": "s3"
+        }
+
+        ## keep track of buckets in a given region
+        if bucket_region in state:
+            state[bucket_region]["src_bucket"].append(bucket_data)
+        else:
+            regions.append(bucket_region)
+            state[bucket_region] = {"src_bucket": [bucket_data], "src_kms_key": []}
+
+        ## keep track of kms key IDs in a given region
+        ## watch out for same key encrypting multiple buckets
+        if bucket_encryption["SSEAlgorithm"] != "aws:kms":
+            continue
+        kms_arn = bucket_encryption["KMSMasterKeyID"]
+        if kms_arn in keys_seen:
+            continue
+        kms_data = {
+            "arn": kms_arn,
+            "id": kms_arn.split("/")[-1],
+            "type": "kms"
+        }
+        state[bucket_region]["src_kms_key"].append(kms_data)
+        keys_seen.append(kms_arn)
+    return (state, regions)
+
+
+
+def add_ssm_params_to_state(state, param_data):
+    for region in state:
+        state[region]["dest_ssm_param"] = param_data
 
 
 ## Recurse through dict to return value(s) defined in expression

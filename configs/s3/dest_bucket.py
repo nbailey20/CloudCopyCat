@@ -8,7 +8,7 @@ DEST_BUCKET_POLICY_TEMPLATE = {
             "Sid": "CloudCopyCat-ReplicationDelivery",
             "Effect": "Allow",
             "Principal": {
-                "AWS": "" ## to be filled in at deployment time
+                "AWS": "*" ## to be filled in at deployment time to avoid cycle
             },
             "Action": [
                 "s3:ReplicateObject",
@@ -16,7 +16,12 @@ DEST_BUCKET_POLICY_TEMPLATE = {
                 "s3:PutObject",
                 "s3:*"
             ],
-            "Resource": "" ## to be filled in at deployment time
+            "Resource": "$dest_bucket/object_arn",
+            "Condition": {
+                "ArnLike": {
+                    "aws:PrincipalArn": "" ## to be filled in at deployment time to avoid cycle
+                }
+            }
         },
         {
             "Sid": "CloudCopyCat-InventoryReportWrites",
@@ -25,14 +30,14 @@ DEST_BUCKET_POLICY_TEMPLATE = {
                 "Service": "s3.amazonaws.com"
             },
             "Action": "s3:PutObject",
-            "Resource": "", ## to be filled in at deployment time
+            "Resource": "$dest_bucket/object_arn",
             "Condition": {
                 "StringEquals": {
-                    "aws:SourceAccount": "", ## to be filled in at deployment time
+                    "aws:SourceAccount": "$src_account",
                     "s3:x-amz-acl": "bucket-owner-full-control"
                 },
                 "ArnLike": {
-                    "aws:SourceArn": [] ## to be filled in at deployment time
+                    "aws:SourceArn": "$src_bucket/#all/arn"
                 }
             }
         }
@@ -40,7 +45,7 @@ DEST_BUCKET_POLICY_TEMPLATE = {
 }
 
 STATE_FILE_SCHEMA = {
-    "awaiting_inv_report": [], ## To be filled in at deployment time
+    "awaiting_inv_report": "$src_bucket/#all/name",
     "awaiting_batch_copy": [],
     "completed": {
         "successful": [],

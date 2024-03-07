@@ -1,5 +1,5 @@
 import re
-
+import json
 from classes.ApiCall import ApiCall
 from helpers.core import get_value_from_expression
 
@@ -10,39 +10,65 @@ class Resource():
             return
         self.state[self.name].update(api_output)
 
-    ## ApiClass can contain refs to objects in state when wrapped as a Service containing a Resource
-    ##   Referencing value in Resource.state is declared with '$' and '#id' for specific index in resource list
+
+    def _render_method_arg(self, arg: str):
+        if type(arg) != str:
+            return arg
+
+        ## Render other API method args, indicated with "@"
+        if arg.startswith("@"):
+            other_method = arg[1:]
+            all_apis = self.create_apis + self.describe_apis + self.delete_apis
+            for api in all_apis:
+                if api.method == other_method:
+                    return api.method_args
+        
+        ## Render values stored in state, indicated with "$"
+        updated_arg = arg
+        renderable_str = re.search(r"(\"*)(\$[\w/#]+)(\"*)", arg)
+        while renderable_str:
+            start_idx, end_idx = renderable_str.span()
+
+            ## render any #id terms into list indexes, e.g. #4
+            partial_str = re.sub(r"#id", f"#{self.id}", renderable_str.group(2))
+            rendered_str = get_value_from_expression(
+                self.state,
+                partial_str[1:], ## remove leading $
+            )
+            if type(rendered_str) != str:
+                rendered_str = json.dumps(rendered_str)
+            ## only keep surrounding quotes when rendered value is a string
+            elif type(rendered_str) == str:
+                rendered_str = renderable_str.group(1) + rendered_str + renderable_str.group(3)
+            updated_arg = updated_arg[:start_idx] + rendered_str + updated_arg[end_idx:]
+            renderable_str = re.search(r"(\"*)(\$[\w/#]+)(\"*)", updated_arg)
+        return updated_arg
+
+
+    ## Method args can contain refs to outputs stored in state when wrapped 
+    ##   as a Deployment containing Resource/ResourceGroups
+    ##   Referencing value in Resource.state is declared with '$' and '#id' for specific index in ResourceGroup
     ##     E.g. {"TopicArn": "$dest_sns/#id/arn"}
     ##   If a property for all resources is desired, use '#all'
+    ## Method args can contain refs to other method args when wrapped
+    ##   as a Deployment containing Resource/ResourceGroups
+    ##   Referencing method args is declared with '@' and method name for corresponding ApiCall
+    ##     E.g. {"other_args": "@create_bucket"}
     def _render_method_args(self, args: dict[str]):
         if not args:
-            return
-        rendered_args = {}
-        for key in args:
-            rendered_args[key] = args[key]
-            if type(args[key]) == str:
-                ## search for any template variables starting with $
-                renderable_str = re.search(r"(\$[\w/#]+)", rendered_args[key])
-                while renderable_str:
-                    ## render any #id terms into list indexes, e.g. #2
-                    partial_str = re.sub(r"#id", f"#{self.id}", renderable_str.group(1))
-
-                    rendered_str = get_value_from_expression(
-                        self.state,
-                        partial_str[1:], ## remove leading $
-                    )
-                    rendered_arg = re.sub(
-                        "\\"+renderable_str.group(1), ## need to escape $ so it can be subbed
-                        str(rendered_str),
-                        rendered_args[key]
-                    )
-                    rendered_args[key] = rendered_arg
-                    renderable_str = re.search(r"(\$[\w/]+)", rendered_args[key])
-            ## if method args contain nested dict, recurse over those keys
-            elif type(args[key]) == dict:
-                rendered_args[key] = self._render_method_args(args[key])
-        return rendered_args
-
+            return args
+        ## recurse over iterables
+        if type(args) == list:
+            return [self._render_method_args(element) for element in args]
+        if type(args) == dict:
+            return {key: self._render_method_args(value) for (key,value) in args.items()}
+        ## render individual str/bytes
+        if type(args) == str:
+            return self._render_method_arg(args)
+        if type(args) == bytes:
+            return bytes(self._render_method_arg(args.decode()), encoding="utf-8")
+        ## don't attempt to render any other types
+        return args
 
 
     def _invoke_apis(self, api_type: str):
@@ -114,10 +140,13 @@ class Resource():
         self._invoke_apis(api_type="describe")
 
     def delete(self):
+        self._invoke_apis(api_type="describe")
         if self._check_if_exists():
             self._invoke_apis(api_type="delete")
             ## delete doesn't update state, call describe after deletion
             self._invoke_apis(api_type="describe")
+            if not self._check_if_exists():
+                print(f"Successfully deleted {self.name}")
         else:
             print("Resource ARN is null, nothing to clean up")
 
@@ -133,8 +162,8 @@ class Resource():
             dependencies: list[str]=[],
             state: dict={}
         ):
-        self.name = name #needed?
-        self.type = type # needed?
+        self.name = name
+        self.type = type
         self.client = client
         self.create_apis = create_apis
         self.describe_apis = describe_apis

@@ -2,12 +2,12 @@ SOURCE_BUCKET_POLICY_TEMPLATE = {
     "Sid": "CloudCopyCat-SourceObjectGet",
     "Effect": "Allow",
     "Principal": {
-        "AWS": [] ## to be filled in
+        "AWS": "$dest_copy_role/arn"
     },
     "Action": [
         "s3:*"
     ],
-    "Resource": [] ## to be filled in
+    "Resource": "$src_bucket/#id/object_arn"
 }
 
 ## Don't overwrite source bucket policy, append to it!

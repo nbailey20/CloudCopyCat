@@ -3,7 +3,7 @@ EVENT_PATTERN_TEMPLATE = {
     "detail-type": ["Object Created"],
     "detail": {
         "bucket": {
-            "name": []
+            "name": ["$dest_bucket/name"]
         },
         "object": {
             "key": [{

@@ -38,7 +38,7 @@ class ApiCall():
             print(f'Unknown API error, exiting: {e}')
             api_res = None
 
-        self._store_outputs(api_res, self.expected_output)
+        self._store_outputs(api_res)
         return api_res
 
 
@@ -46,12 +46,12 @@ class ApiCall():
         self.client = client
 
     ## Set self.output to be dict containing output_key => output_values
-    def _store_outputs(self, api_res: dict[str], output_keys: dict[str]):
-        if not output_keys:
+    def _store_outputs(self, api_res: dict[str]):
+        if not self.expected_output:
             return
         self.output = {}
-        for key in output_keys:
-            output_expression = output_keys[key]
+        for key in self.expected_output:
+            output_expression = self.expected_output[key]
             self.output[key] = get_value_from_expression(api_res, output_expression)
 
 

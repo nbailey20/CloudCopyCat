@@ -4,9 +4,7 @@ import zipfile, os
 
 from helpers.arguments.parse import parse_args
 from helpers.arguments.validate import args_are_valid
-from helpers.state import get_deployment_state
-from helpers.setup import create_resources
-from helpers.remove import delete_resources
+import helpers.resource_handler as resource_handler
 
 def build_zips():
     cwd = os.getcwd()
@@ -22,20 +20,12 @@ def main():
     if not args_are_valid(args):
         return
     
-    #state = get_deployment_state(args)
-
-    if args.remove:
-        print("Deleting resources")
-        delete_resources(args)
-        print("Done")
-        return
-    
-    print("Building Lambda zips...")
-    build_zips()
+    # print("Building Lambda zips...")
+    # build_zips()
 
     
-    print("Creating resources")
-    create_resources(args)
+    print("Starting CloudCopyCat")
+    resource_handler.run(args)
     print("Done")
 
 

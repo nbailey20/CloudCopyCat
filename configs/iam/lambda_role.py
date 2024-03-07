@@ -4,7 +4,7 @@ LAMBDA_IAM_POLICY_TEMPLATE = {
         {
             "Action": "logs:CreateLogGroup",
             "Effect": "Allow",
-            "Resource": "" ## filled in at deployment time
+            "Resource": "arn:aws:logs:*:$dest_account:*"
         },
         {
             "Action": [
@@ -12,7 +12,7 @@ LAMBDA_IAM_POLICY_TEMPLATE = {
                 "logs:CreateLogStream"
             ],
             "Effect": "Allow",
-            "Resource": "" ## filled in at deployment time
+            "Resource": "arn:aws:logs:*:$dest_account:log-group:/aws/lambda*"
         },
         {
             "Effect": "Allow",
@@ -22,17 +22,17 @@ LAMBDA_IAM_POLICY_TEMPLATE = {
         {
             "Effect": "Allow",
             "Action": "iam:PassRole",
-            "Resource": "" ## filled in at deployment time
+            "Resource": "$dest_copy_role/arn"
         },
         {
             "Effect": "Allow",
             "Action": "kms:*", ## TODO fine tune this
-            "Resource": "*"
+            "Resource": "$dest_kms_key/#all/arn"
         },
         {
             "Effect": "Allow",
             "Action": "ssm:GetParameter",
-            "Resource": "" ## filled in at deployment time
+            "Resource": "arn:aws:ssm:*:$dest_account:parameter/CloudCopyCat-*"
         },
         {
             "Effect": "Allow",
@@ -40,7 +40,7 @@ LAMBDA_IAM_POLICY_TEMPLATE = {
                 "s3:GetObject",
                 "s3:PutObject"
             ],
-            "Resource": "" ## filled in at deployment time
+            "Resource": "$dest_bucket/#all/object_arn"
         }
     ]
 }
