@@ -24,7 +24,7 @@ def get_param_data(src_account, dest_account):
     ]
 
 
-def dest_ssm_param(src_account, dest_account):
+def dest_ssm_param():
     ## Create API
     create_param = ApiCall(
         method = "put_parameter",

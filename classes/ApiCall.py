@@ -25,20 +25,20 @@ class ApiCall():
         except ClientError as e:
             if e.response['Error'] and e.response['Error']['Code'] in ['AccessDenied', 'AccessDeniedException']:
                 self.exception = "AccessDenied"
-                print(f'CloudCopyCat does not have permission to perform {method_to_call}, skipping')
+                print(f'CloudCopyCat does not have permission to perform {self.method}, skipping: {e}')
             elif e.response['Error'] and e.response['Error']['Code'] in ['NotFoundException', 'NoSuchEntity']:
                 self.exception = "NotFound"
                 print(f'Resource not found exception received from AWS client: {e}')
             else:
                 self.exception = "ClientError"
                 print(f'AWS client error: {e}')
-                print("method", method_args)
+                print("method", self.method)
                 print("method args", method_args)
             api_res = None
         except Exception as e:
             self.exception = "UnknownError"
             print(f'Unknown API error, exiting: {e}')
-            print("method", method_args)
+            print("method", self.method)
             print("method args", method_args)
             api_res = None
 

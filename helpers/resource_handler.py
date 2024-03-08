@@ -71,7 +71,7 @@ def run(args):
         src_replication_role(),
         src_replication_policy(),
         dest_sns_topic(args.email),
-        dest_ssm_param(src_account_id, dest_account_id),
+        dest_ssm_param(),
         dest_lambda_function(dest_account_id),
         dest_eventbridge_rule(),
         src_kms_key(),

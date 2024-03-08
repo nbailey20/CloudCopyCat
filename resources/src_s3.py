@@ -8,28 +8,23 @@ from configs.s3.source_bucket import SOURCE_BUCKET_POLICY_TEMPLATE, EMPTY_BUCKET
 
 ## SOURCE BUCKET
 def src_bucket():
-    def generate_bucket_arn(name=None, policy=None):
-        if policy == "null":
+    def generate_bucket_arn(name=None):
+        if name == "null":
             return {"arn": None}
-        policy = json.loads(policy)
-        for statement in policy:
-            if "CloudCopyCat" in statement["Sid"]:
-                return {"arn": f"arn:aws:s3:::{name}"}
-        return {"arn": None}
+        return {"arn": f"arn:aws:s3:::{name}"}
     get_bucket_arn = Transformer(
         func = generate_bucket_arn,
-        function_args = {
-            "name": "$src_bucket/#id/name",
-            "policy": "$src_bucket/#id/policy"},
+        function_args = {"name": "$src_bucket/#id/name"},
         output_keys = ["arn"]
     )
-    def generate_object_arn(bucket_arn=None):
-        if not bucket_arn:
+
+    def generate_object_arn(name=None):
+        if not name:
             return {"object_arn": None}
-        return {"arn": f"{bucket_arn}/*"}
+        return {"object_arn": f"arn:aws:s3:::{name}/*"}
     get_object_arn = Transformer(
         func = generate_object_arn,
-        function_args = {"bucket_arn": "$src_bucket/#id/arn"},
+        function_args = {"name": "$src_bucket/#id/name"},
         output_keys = ["object_arn"]
     )
     set_policy = ApiCall(
@@ -67,7 +62,7 @@ def src_bucket():
         method_args = {
             "Bucket": "$src_bucket/#id/name",
             "ReplicationConfiguration": {
-                "Role": REPLICATION_ROLE_NAME,
+                "Role": f"arn:aws:iam:$region:$dest_account:role/{REPLICATION_ROLE_NAME}",
                 "Rules": [
                     {
                         "ID": "CloudCopyCatReplication",
@@ -102,17 +97,33 @@ def src_bucket():
 
 
     ## Describe APIs
-    describe_policy = ApiCall(
+    get_policy = ApiCall(
         method = "get_bucket_policy",
         method_args = {
             "Bucket": "$src_bucket/#id/name"
         },
         output_keys = {"policy": "Policy"}
     )
+    def search_for_sid(policy=None):
+        if policy == "null":
+            return {"arn": None}
+        policy = json.loads(policy)
+        for statement in policy["Statement"]:
+            if "CloudCopyCat" in statement["Sid"]:
+                return {"arn": f"arn:aws:s3:::$src_bucket/#id/name"}
+        return {"arn": None}
+    validate_policy = Transformer(
+        func = search_for_sid,
+        function_args = {"policy": "$src_bucket/#id/policy"},
+        output_keys = ["arn"]
+    )
 
 
     ## Delete APIs
     def remove_statements(policy=None):
+        if not policy:
+            return
+        policy = json.loads(policy)
         statements = policy["Statement"]
         for statement in statements:
             if "Sid" in statement and "CloudCopyCat" in statement["Sid"]:
@@ -127,14 +138,14 @@ def src_bucket():
         name = "src_bucket",
         type = "s3",
         create_apis = (
-            update_policy,
-            get_bucket_arn,
             get_object_arn,
+            update_policy,
             set_policy,
             put_versioning,
-            put_replication
+            put_replication,
+            get_bucket_arn
         ),
-        describe_apis = (describe_policy, get_bucket_arn, get_object_arn),
+        describe_apis = (get_policy, validate_policy),
         delete_apis = (revert_policy,)
     )
     return bucket_group
