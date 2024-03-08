@@ -124,4 +124,11 @@ def get_value_from_expression(dict_obj: dict, expression: str):
             return get_value_from_expression(dict_obj[list_idx], expression[1:])
 
     ## handle case where dict_obj keys are dicts
-    return get_value_from_expression(dict_obj[next_key], expression[1:])
+    try:
+        return get_value_from_expression(dict_obj[next_key], expression[1:])
+    except KeyError:
+        print(f"Could not find key {next_key} in object")
+        return None
+    except TypeError:
+        print(f"Unknown error with key {next_key} in object")
+        return None

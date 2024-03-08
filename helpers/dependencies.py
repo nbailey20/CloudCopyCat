@@ -8,15 +8,15 @@ RESOURCE_DEPENDENCIES = {
     "dest_bucket": [
         "dest_kms_key"
     ],
-    "dest_lambda_role": [],
-    "dest_lambda_policy": [
-        "dest_lambda_role",
+    "dest_copy_role": [],
+    "dest_copy_policy": [
         "dest_copy_role",
         "dest_kms_key",
         "dest_bucket"
     ],
-    "dest_copy_role": [],
-    "dest_copy_policy": [
+    "dest_lambda_role": [],
+    "dest_lambda_policy": [
+        "dest_lambda_role",
         "dest_copy_role",
         "dest_kms_key",
         "dest_bucket"

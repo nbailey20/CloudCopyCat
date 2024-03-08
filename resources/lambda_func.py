@@ -1,12 +1,19 @@
-import json
+import time
 from classes.ApiCall import ApiCall
 from classes.ResourceGroup import Resource
+from classes.Transformer import Transformer
 from helpers.config import LAMBDA_RUNTIME, LAMBDA_FUNCTION_NAME, LAMBDA_STATE_FOLDER
 from helpers.config import EVENTBRIDGE_RULE_NAME
 
 
 def dest_lambda_function(dest_account):
     ## Create APIs
+    def sleep_for_15():
+        print("Sleeping for 15 to let Lambda role fully create")
+        time.sleep(15)
+    wait_for_lambda_role = Transformer(
+        func = sleep_for_15
+    )
     create_function = ApiCall(
         method = "create_function",
         method_args = {
@@ -51,7 +58,7 @@ def dest_lambda_function(dest_account):
     function_resource = Resource(
         name = "dest_lambda_function",
         type = "lambda",
-        create_apis = (create_function, add_permission),
+        create_apis = (wait_for_lambda_role, create_function, add_permission),
         describe_apis = (describe_function,),
         delete_apis = (delete_function,)
     )

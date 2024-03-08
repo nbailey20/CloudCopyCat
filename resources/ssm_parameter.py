@@ -17,8 +17,8 @@ def get_param_data(src_account, dest_account):
             "type": "ssm"
         },
         {
-            "Name": "CloudCopyCat-Batch-Copy-Role-Arn",
-            "Value": f"arn:aws:iam::{dest_account}:role/{BATCH_COPY_ROLE_NAME}",
+            "name": "CloudCopyCat-Batch-Copy-Role-Arn",
+            "value": f"arn:aws:iam::{dest_account}:role/{BATCH_COPY_ROLE_NAME}",
             "type": "ssm"
         }
     ]
@@ -47,7 +47,7 @@ def dest_ssm_param(src_account, dest_account):
                 ]
             }]
         },
-        output_keys = {"arn": "Parameters/*/Arn"}
+        output_keys = {"arn": "Parameters/#all/Arn"}
     )
 
     ## Delete API
@@ -56,28 +56,11 @@ def dest_ssm_param(src_account, dest_account):
         method_args = {"Name": "$dest_ssm_param/#id/name"}
     )
 
-    state = {
-        "dest_ssm_param": [
-            {
-                "name": "CloudCopyCat-Source-Account-ID",
-                "value": src_account
-            },
-            {
-                "name": "CloudCopyCat-State-File-Path",
-                "value": f"{LAMBDA_STATE_FOLDER}/{LAMBDA_STATE_FILE_NAME}"
-            },
-            {
-                "Name": "CloudCopyCat-Batch-Copy-Role-Arn",
-                "Value": f"arn:aws:iam::{dest_account}:role/{BATCH_COPY_ROLE_NAME}"
-            }
-        ]
-    }
     param_resource = ResourceGroup(
         name = "dest_ssm_param",
         type = "ssm",
         create_apis = (create_param,),
         describe_apis = (describe_param,),
-        delete_apis = (delete_param,),
-        state = state
+        delete_apis = (delete_param,)
     )
     return param_resource

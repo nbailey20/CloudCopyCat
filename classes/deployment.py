@@ -118,7 +118,7 @@ class Deployment():
 
                 ## ResourceGroups can have custom numbers of resources per region
                 if resource.name in self.num_resources:
-                    resource.set_num_resources(self.num_resources[resource.name[region]])
+                    resource.set_num_resources(self.num_resources[resource.name][region])
 
                 client = self._get_client(resource, region)
                 if not client:

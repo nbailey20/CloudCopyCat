@@ -32,10 +32,14 @@ class ApiCall():
             else:
                 self.exception = "ClientError"
                 print(f'AWS client error: {e}')
+                print("method", method_args)
+                print("method args", method_args)
             api_res = None
         except Exception as e:
             self.exception = "UnknownError"
             print(f'Unknown API error, exiting: {e}')
+            print("method", method_args)
+            print("method args", method_args)
             api_res = None
 
         self._store_outputs(api_res)

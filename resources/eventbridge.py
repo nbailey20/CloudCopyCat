@@ -22,7 +22,7 @@ def dest_eventbridge_rule():
             "Rule": EVENTBRIDGE_RULE_NAME,
             "Targets": [{
                 "Id": EVENTBRIDGE_RULE_TARGETID,
-                "Arn": "$dest_lambda/arn"
+                "Arn": "$dest_lambda_function/arn"
             }]
         }
     )

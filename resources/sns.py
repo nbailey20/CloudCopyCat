@@ -8,7 +8,10 @@ def dest_sns_topic(email_address):
     create_topic = ApiCall(
         method = "create_topic",
         method_args = {
-            "KmsMasterKeyId": "$dest_kms_key/arn"
+            "Name": SNS_TOPIC_NAME,
+            "Attributes": {
+                 "KmsMasterKeyId": "$dest_kms_key/arn"
+            }
         },
         output_keys = {"arn": "TopicArn"}
     )

@@ -3,7 +3,7 @@ from classes.ApiCall import ApiCall
 from classes.Transformer import Transformer
 from classes.Resource import Resource
 from configs.s3.dest_bucket import DEST_BUCKET_POLICY_TEMPLATE, STATE_FILE_SCHEMA
-from helpers.config import LAMBDA_STATE_FOLDER, LAMBDA_STATE_FILE_NAME
+from helpers.config import LAMBDA_STATE_FOLDER, LAMBDA_STATE_FILE_NAME, LAMBDA_FUNCTION_NAME
 from helpers.config import REPLICATION_ROLE_NAME
 
 
@@ -113,6 +113,14 @@ def dest_bucket(bucket_name, dest_account):
             "Body": bytes(json.dumps(STATE_FILE_SCHEMA), encoding="utf-8")
         }
     )
+    put_lambda_zip = ApiCall(
+        method = "upload_file",
+        method_args = {
+            "Bucket": bucket_name,
+            "Key": f"{LAMBDA_STATE_FOLDER}/{LAMBDA_FUNCTION_NAME}",
+            "Filename": f"configs/lambda/{LAMBDA_FUNCTION_NAME}.zip"
+        }
+    )
 
     ## describe APIs
     describe_bucket = ApiCall(
@@ -121,6 +129,23 @@ def dest_bucket(bucket_name, dest_account):
     )
 
     ## delete APIs
+    # get_zip_versions = ApiCall(
+    #     method = "list_object_verions",
+    #     method_args = {
+    #         "Prefix": f"{LAMBDA_STATE_FOLDER}/{LAMBDA_FUNCTION_NAME}"
+    #     },
+    #     output_keys = {"zip_verions": "Versions/#all/VersionId"}
+    # )
+    # get_state_versions = ApiCall(
+    #     method = "list_object_verions",
+    #     method_args = {
+    #         "Prefix": f"{LAMBDA_STATE_FOLDER}/{LAMBDA_STATE_FILE_NAME}"
+    #     },
+    #     output_keys = {"zip_verions": "Versions/#all/VersionId"}
+    # )
+    # delete_zip_objects = ApiCall(
+    #     method = "delete_objects"
+    # )
     delete_bucket = ApiCall(
         method = "delete_bucket",
         method_args = {
@@ -142,10 +167,16 @@ def dest_bucket(bucket_name, dest_account):
             put_versioning,
             configure_policy,
             put_policy,
-            put_state_object
+            put_state_object,
+            put_lambda_zip
         ),
         describe_apis = (describe_bucket, get_bucket_arn, get_object_arn),
-        delete_apis = (delete_bucket,)
+        delete_apis = (
+            # get_zip_versions,
+            # get_state_versions,
+            # delete_zip_objects,
+            # delete_state_objects,
+            delete_bucket,)
     )
 
     return bucket_resource

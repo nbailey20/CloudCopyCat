@@ -36,6 +36,7 @@ def create_role(resource_name, role_name, trust_policy):
 
 def create_policy(resource_name, policy_name, policy_document, role_name):
     def remove_empty_valued_statements(policy=None):
+        policy = json.loads(policy)
         statements = policy["Statement"]
         idx = 0
         while idx < len(statements):
@@ -44,13 +45,15 @@ def create_policy(resource_name, policy_name, policy_document, role_name):
                     del statements[idx]
                     continue ## don't increment idx if we remove a statement
             idx += 1
+        return {"policy": json.dumps(policy)}
     configure = Transformer(
         func = remove_empty_valued_statements,
-        function_args = {"policy": policy_document}
+        function_args = {"policy": json.dumps(policy_document)},
+        output_keys = ["policy"]
     )
     create = ApiCall(
                 method = "create_policy",
-                method_args = {"PolicyName": policy_name, "PolicyDocument": json.dumps(policy_document)},
+                method_args = {"PolicyName": policy_name, "PolicyDocument": f"${resource_name}/policy"},
                 output_keys = {"arn": "Policy/Arn"}
             )
     attach = ApiCall(

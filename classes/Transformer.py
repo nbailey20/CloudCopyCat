@@ -7,7 +7,12 @@ class Transformer():
         func_args = self.method_args
         if args:
             func_args = args
-        func_res = self.method(**func_args)
+
+        func_res = None
+        if not func_args:
+           func_res = self.method()
+        else:
+            func_res = self.method(**func_args)
         self._store_outputs(func_res)
 
 
