@@ -174,11 +174,14 @@ class Deployment():
             }
         for region in self.regions:
             for resource in self.resources:
+                empty_state = {"arn": None, "type": resource.type}
+                if resource.name in self.num_resources:
+                    empty_state = [empty_state] * self.num_resources[resource.name][region]
                 if resource.type == "iam":
                     if resource.name in self.state["iam"]:
                         continue
-                    self.state["iam"][resource.name] = {"arn": None, "type": "iam"}
+                    self.state["iam"][resource.name] = empty_state
                 else:
                     if resource.name in self.state[region]:
                         continue
-                    self.state[region][resource.name] = {"arn": None, "type": resource.type}
+                    self.state[region][resource.name] = empty_state

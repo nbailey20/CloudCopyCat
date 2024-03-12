@@ -18,7 +18,7 @@ class Transformer():
 
     ## Set self.output to be dict containing output_key => output_values
     def _store_outputs(self, func_res: dict[str]):
-        if not self.expected_output:
+        if not self.expected_output or not func_res:
             return
         self.output = {}
         for key in self.expected_output:

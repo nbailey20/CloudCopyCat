@@ -8,7 +8,7 @@ from helpers.config import REPLICATION_ROLE_NAME
 
 
 ## DEST BUCKET
-def dest_bucket(bucket_name, dest_account):
+def dest_bucket(bucket_name):
     def generate_bucket_arn(name=None):
         if name == None or name == "null":
             return {"arn": None}
@@ -49,8 +49,7 @@ def dest_bucket(bucket_name, dest_account):
     )
     create_bucket = ApiCall(
         method      = "create_bucket",
-        method_args = method_args,
-        output_keys = {"name": bucket_name}
+        method_args = method_args
     )
     get_bucket_name = ApiCall(
         method = "list_buckets",
@@ -91,7 +90,7 @@ def dest_bucket(bucket_name, dest_account):
     )
     def add_replication_role(policy=None):
         policy = json.loads(policy)
-        policy["Statement"][0]["Condition"]["ArnLike"]["aws:PrincipalArn"] = f"arn:aws:iam::{dest_account}:role/{REPLICATION_ROLE_NAME}"
+        policy["Statement"][0]["Condition"]["ArnLike"]["aws:PrincipalArn"] = f"arn:aws:iam::$src_account:role/{REPLICATION_ROLE_NAME}"
         return {"policy": json.dumps(policy)}
     configure_policy = Transformer(
         func = add_replication_role,

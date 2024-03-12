@@ -48,5 +48,11 @@ RESOURCE_DEPENDENCIES = {
         "dest_bucket",
         "dest_kms_key",
         "dest_copy_role"
+    ],
+    "src_batch_replication": [
+        "dest_kms_key",
+        "dest_bucket",
+        "src_replication_role",
+        "src_bucket"
     ]
 }

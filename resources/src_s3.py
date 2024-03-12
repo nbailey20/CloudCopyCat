@@ -62,7 +62,7 @@ def src_bucket():
         method_args = {
             "Bucket": "$src_bucket/#id/name",
             "ReplicationConfiguration": {
-                "Role": f"arn:aws:iam:$region:$dest_account:role/{REPLICATION_ROLE_NAME}",
+                "Role": f"arn:aws:iam:$region:$src_account:role/{REPLICATION_ROLE_NAME}",
                 "Rules": [
                     {
                         "ID": "CloudCopyCatReplication",
@@ -128,9 +128,13 @@ def src_bucket():
         for statement in statements:
             if "Sid" in statement and "CloudCopyCat" in statement["Sid"]:
                 statements.remove(statement)
+        if len(statements) == 0:
+            print("Bucket policy created by CloudCopyCat, leaving intact")
+        return {"policy": json.dumps(policy)}
     revert_policy = Transformer(
         func = remove_statements,
-        function_args = {"policy": "$src_bucket/#id/policy"}
+        function_args = {"policy": "$src_bucket/#id/policy"},
+        output_keys = ["policy"]
     )
 
 
@@ -146,6 +150,6 @@ def src_bucket():
             get_bucket_arn
         ),
         describe_apis = (get_policy, validate_policy),
-        delete_apis = (revert_policy,)
+        delete_apis = (revert_policy, set_policy)
     )
     return bucket_group

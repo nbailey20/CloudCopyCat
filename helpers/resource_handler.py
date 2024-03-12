@@ -1,5 +1,3 @@
-import time
-
 from classes.Deployment import Deployment
 from resources.kms import dest_kms_key, src_kms_key
 from resources.iam import dest_copy_role, dest_copy_policy
@@ -11,6 +9,7 @@ from resources.ssm_parameter import get_param_data, dest_ssm_param
 from resources.lambda_func import dest_lambda_function
 from resources.eventbridge import dest_eventbridge_rule
 from resources.src_s3 import src_bucket
+from resources.batch_replication import src_batch_replication
 
 from helpers.core import create_session, get_account_id, get_src_state, add_ssm_params_to_state
 from helpers.dependencies import RESOURCE_DEPENDENCIES
@@ -63,7 +62,7 @@ def run(args):
 
     aws_resources = [
         dest_kms_key(src_account_id, args.dest_bucket),
-        dest_bucket(args.dest_bucket, dest_account_id),
+        dest_bucket(args.dest_bucket),
         dest_copy_role(),
         dest_copy_policy(),
         dest_lambda_role(),
@@ -76,21 +75,24 @@ def run(args):
         dest_eventbridge_rule(),
         src_kms_key(),
         src_bucket(),
-        ## TODO
-        #src_batch_replication(bucket_names)
+        src_batch_replication(args.force)
     ]
 
     ## Declare number of resources for each ResourceGroup
     num_resources = {
         "src_bucket": {},
         "src_kms_key": {},
+        "src_batch_replication": {},
         "dest_ssm_param": {}
     }
     for region in regions:
         num_resources["src_bucket"][region] = len(state[region]["src_bucket"])
         num_resources["src_kms_key"][region] = len(state[region]["src_kms_key"])
+        ## one batch rep job per bucket
+        num_resources["src_batch_replication"][region] = len(state[region]["src_bucket"])
         num_resources["dest_ssm_param"][region] = len(state[region]["dest_ssm_param"])
-   
+
+
     cloudcopycat = Deployment(
         src_profile = args.src_profile,
         dest_profile = args.dest_profile,
@@ -107,156 +109,3 @@ def run(args):
     else:
         print("Creating new deployment")
         cloudcopycat.create()
-
-
-
-    # src_region_dict = get_src_buckets(src_session, args.region)
-    # num_regions = len(src_region_dict.keys())
-
-    # ## create keys in every region first, all ARNs needed for global IAM policy
-    # dest_kms_dict = {"all_arn": []}
-    # for region in src_region_dict.keys():
-    #     src_session = create_session(args.src_profile, region=region)
-    #     dest_session = create_session(args.dest_profile, region=region)
-    #     dest_bucket = args.dest_bucket
-    #     if num_regions > 1:
-    #         dest_bucket = f"{dest_bucket}-{region}"
-    #     src_buckets = src_region_dict[region]["buckets"]
-
-    #     ## type(kms) == {"arn": str, "id": str}
-    #     kms = create_dest_key(
-    #             dest_session,
-    #             src_account_id,
-    #             dest_account_id,
-    #             src_buckets,
-    #             dest_bucket
-    #         )
-    #     dest_kms_dict["all_arn"].append(kms["arn"])
-    #     dest_kms_dict[region] = kms
-
-    # all_src_kms_arns = []
-    # all_dest_buckets = []
-    # for region in src_region_dict.keys():
-    #     all_src_kms_arns += src_region_dict[region]["kms"]
-    # ## Create roles once for all regions
-    # ## type(roles) == {rolename => role ARN str}
-    # roles = create_iam_roles(
-    #             src_session,
-    #             dest_session,
-    #             src_buckets,
-    #             all_src_kms_arns, ## TODO if this is empty, remove IAM statement
-    #             dest_account_id,
-    #             dest_bucket,
-    #             dest_kms_dict["all_arn"]
-    #         )
-    # ## ensure roles are fully created before proceeding
-    # time.sleep(10)
-
-
-    # for region in src_region_dict.keys():
-    #     src_session = create_session(args.src_profile, region=region)
-    #     dest_session = create_session(args.dest_profile, region=region)
-    #     dest_bucket = args.dest_bucket
-    #     if num_regions > 1:
-    #         dest_bucket = f"{dest_bucket}-{region}"
-    #     src_buckets = src_region_dict[region]["buckets"]
-    #     src_kms_arns = src_region_dict[region]["kms"]
-
-    #     create_sns_topic(
-    #         dest_session,
-    #         dest_kms_dict[region]["id"],
-    #         args.email
-    #     )
-    #     create_dest_bucket(
-    #         dest_session,
-    #         dest_kms_dict[region]["arn"],
-    #         dest_bucket
-    #     )
-    #     create_state_object(
-    #         dest_session,
-    #         src_buckets,
-    #         dest_bucket
-    #     )
-    #     add_dest_bucket_policy(
-    #         dest_session,
-    #         src_buckets,
-    #         src_account_id,
-    #         dest_bucket,
-    #         roles[REPLICATION_ROLE_NAME]
-    #     )
-
-    #     ssm_params = [
-    #         {
-    #             "Name": "CloudCopyCat-Source-Account-ID",
-    #             "Value": src_account_id
-    #         },
-    #         {
-    #             "Name": "CloudCopyCat-State-File-Path",
-    #             "Value": f"{LAMBDA_STATE_FOLDER}/{LAMBDA_STATE_FILE_NAME}"
-    #         },
-    #         {
-    #             "Name": "CloudCopyCat-Batch-Copy-Role-Arn",
-    #             "Value": f"arn:aws:iam::{dest_account_id}:role/{BATCH_COPY_ROLE_NAME}"
-    #         }
-    #     ]
-    #     create_ssm_params(
-    #         dest_session,
-    #         ssm_params,
-    #         dest_kms_dict[region]["id"]
-    #     )
-
-    #     ## type(lambda_arn) == str
-    #     lambda_arn = create_lambda(
-    #         dest_session,
-    #         roles[LAMBDA_ROLE_NAME],
-    #         dest_bucket,
-    #         dest_kms_dict[region]["arn"]
-    #     )
-    #     ## lambda needs to be created before batch replication occurs
-    #     time.sleep(20)
-
-    #     ## type(rule_arn) == str
-    #     rule_arn = create_eb_rule(
-    #         dest_session,
-    #         lambda_arn,
-    #         dest_bucket
-    #     )
-    #     add_lambda_permission(
-    #         dest_session,
-    #         rule_arn,
-    #         dest_account_id
-    #     )
-
-    #     update_src_keys(
-    #         src_session,
-    #         src_region_dict[region]["kms"],
-    #         roles[BATCH_COPY_ROLE_NAME]
-    #     )
-
-    #     update_src_bucket_policies(
-    #         src_session,
-    #         src_buckets,
-    #         roles[BATCH_COPY_ROLE_NAME]
-    #     )
-    #     enable_bucket_versioning(
-    #         src_session,
-    #         src_buckets
-    #     )
-    #     enable_s3_replication(
-    #         src_session,
-    #         src_buckets,
-    #         dest_account_id,
-    #         dest_bucket,
-    #         roles[REPLICATION_ROLE_NAME],
-    #         dest_kms_dict[region]["arn"]
-    #     )
-    #     create_batch_replication_jobs(
-    #         src_session,
-    #         src_account_id,
-    #         src_buckets,
-    #         dest_account_id,
-    #         dest_bucket,
-    #         roles[REPLICATION_ROLE_NAME],
-    #         dest_kms_dict[region]["arn"]
-    #     )
-    # return

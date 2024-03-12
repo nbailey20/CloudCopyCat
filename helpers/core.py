@@ -123,7 +123,7 @@ def get_value_from_expression(dict_obj: dict, expression: str):
                 return None
             return get_value_from_expression(dict_obj[list_idx], expression[1:])
 
-    ## handle case where dict_obj keys are dicts
+    ## handle case where dict_obj keys are dicts, recurse
     try:
         return get_value_from_expression(dict_obj[next_key], expression[1:])
     except KeyError:

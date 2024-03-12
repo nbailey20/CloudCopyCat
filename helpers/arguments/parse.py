@@ -63,6 +63,12 @@ def parse_args():
         help    = "S3 Bucket name to copy data from (default *)",
         default = "*"
     )
+    parser.add_argument( 
+        "--force",
+        dest   = "force",
+        action = "store_true",
+        help   = "Force CloudCopyCat to copy objects, even if Batch Copy jobs were previously created"
+    )
 
     # Add verbosity flag
     parser.add_argument(

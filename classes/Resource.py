@@ -23,9 +23,9 @@ class Resource():
                 if api.method == other_method:
                     return api.method_args
         
-        ## Render values stored in state, indicated with "$"
+        ## Render values stored in state, indicated with "$" or "${}"
         updated_arg = arg
-        renderable_str = re.search(r"(\"*)(\$[\w/#]+)(\"*)", arg)
+        renderable_str = re.search(r"(\"*)\$\{*([\w/#]+)\}*(\"*)", arg)
         while renderable_str:
             start_idx, end_idx = renderable_str.span()
 
@@ -33,7 +33,7 @@ class Resource():
             partial_str = re.sub(r"#id", f"#{self.id}", renderable_str.group(2))
             rendered_str = get_value_from_expression(
                 self.state,
-                partial_str[1:], ## remove leading $
+                partial_str,
             )
             if type(rendered_str) != str:
                 rendered_str = json.dumps(rendered_str)
@@ -41,7 +41,7 @@ class Resource():
             elif type(rendered_str) == str:
                 rendered_str = renderable_str.group(1) + rendered_str + renderable_str.group(3)
             updated_arg = updated_arg[:start_idx] + rendered_str + updated_arg[end_idx:]
-            renderable_str = re.search(r"(\"*)(\$[\w/#]+)(\"*)", updated_arg)
+            renderable_str = re.search(r"(\"*)\$\{*([\w/#]+)\}*(\"*)", updated_arg)
         return updated_arg
 
 
