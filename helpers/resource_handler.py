@@ -53,6 +53,9 @@ def run(args):
     if not state:
         print("No source buckets to copy data from, exiting.")
         return
+    multi_region = False
+    if len(regions) > 1:
+        multi_region = True
     
     param_data = get_param_data(src_account_id, dest_account_id)
     add_ssm_params_to_state(state, param_data)
@@ -61,21 +64,21 @@ def run(args):
     state["iam"] = {}
 
     aws_resources = [
-        dest_kms_key(src_account_id, args.dest_bucket),
-        dest_bucket(args.dest_bucket),
-        dest_copy_role(),
-        dest_copy_policy(),
-        dest_lambda_role(),
-        dest_lambda_policy(),
-        src_replication_role(),
-        src_replication_policy(),
-        dest_sns_topic(args.email),
-        dest_ssm_param(),
-        dest_lambda_function(dest_account_id),
-        dest_eventbridge_rule(),
-        src_kms_key(),
-        src_bucket(),
-        src_batch_replication(args.force)
+        dest_kms_key(src_account_id, args.dest_bucket, multi_region),
+        dest_bucket(args.dest_bucket, multi_region),
+        # dest_copy_role(),
+        # dest_copy_policy(),
+        # dest_lambda_role(),
+        # dest_lambda_policy(),
+        # src_replication_role(),
+        # src_replication_policy(),
+        # dest_sns_topic(args.email),
+        # dest_ssm_param(),
+        # dest_lambda_function(dest_account_id),
+        # dest_eventbridge_rule(),
+        # src_kms_key(),
+        # src_bucket(),
+       # src_batch_replication(args.force)
     ]
 
     ## Declare number of resources for each ResourceGroup

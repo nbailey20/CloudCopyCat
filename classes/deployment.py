@@ -104,7 +104,6 @@ class Deployment():
 
 
     def _do_action(self, action: str):
-        num_regions = len(self.regions)
         for idx, region in enumerate(self.regions):
             ## delete resources in opposite order they were created
             resource_list = self.resources
@@ -113,7 +112,7 @@ class Deployment():
 
             for resource in resource_list:
                 ## only create IAM services once globally
-                if idx != num_regions-1 and resource.type == "iam":
+                if idx != 0 and resource.type == "iam":
                     continue
 
                 ## ResourceGroups can have custom numbers of resources per region

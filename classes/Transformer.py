@@ -3,10 +3,12 @@
 ## Can be passed as a Resource API when data transformation is required
 ##   between one API's output and the next API's method_args
 class Transformer():
-    def execute(self, args: dict[str]=None):
+    def execute(self, args: dict[str]=None, outputs: dict[str]=None):
         func_args = self.method_args
         if args:
             func_args = args
+        if outputs:
+            self.expected_output = outputs
 
         func_res = None
         if not func_args:

@@ -80,8 +80,9 @@ class Resource():
 
         for api in apis:
             rendered_args = self._render_method_args(api.method_args)
+            rendered_outputs = self._render_method_args(api.expected_output)
             api.set_client(self.client)
-            api.execute(args=rendered_args)
+            api.execute(args=rendered_args, outputs=rendered_outputs)
             if api.exception:
                 print(f"Received exception while executing ApiCall: {api.exception}")
                 if api_type == "create":

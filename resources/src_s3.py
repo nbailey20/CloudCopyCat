@@ -62,7 +62,7 @@ def src_bucket():
         method_args = {
             "Bucket": "$src_bucket/#id/name",
             "ReplicationConfiguration": {
-                "Role": f"arn:aws:iam:$region:$src_account:role/{REPLICATION_ROLE_NAME}",
+                "Role": f"arn:aws:iam::$src_account:role/{REPLICATION_ROLE_NAME}",
                 "Rules": [
                     {
                         "ID": "CloudCopyCatReplication",

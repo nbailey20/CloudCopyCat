@@ -2,7 +2,7 @@ from botocore.exceptions import ClientError
 from helpers.core import get_value_from_expression
 
 class ApiCall():
-    def execute(self, args: dict[str]=None):
+    def execute(self, args: dict[str]=None, outputs: dict[str]=None):
         try:
             method_to_call = getattr(self.client, self.method)
         except:
@@ -42,7 +42,7 @@ class ApiCall():
             print("method args", method_args)
             api_res = None
 
-        self._store_outputs(api_res)
+        self._store_outputs(api_res, outputs)
         return api_res
 
 
@@ -50,12 +50,15 @@ class ApiCall():
         self.client = client
 
     ## Set self.output to be dict containing output_key => output_values
-    def _store_outputs(self, api_res: dict[str]):
-        if not self.expected_output:
+    def _store_outputs(self, api_res: dict[str], outputs: dict[str]=None):
+        expected_output = self.expected_output
+        if outputs:
+            expected_output = outputs
+        if not expected_output:
             return
         self.output = {}
-        for key in self.expected_output:
-            output_expression = self.expected_output[key]
+        for key in expected_output:
+            output_expression = expected_output[key]
             self.output[key] = get_value_from_expression(api_res, output_expression)
 
 

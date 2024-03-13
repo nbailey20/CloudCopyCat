@@ -8,7 +8,9 @@ from configs.kms.dest_key import DEST_KMS_POLICY_TEMPLATE
 from helpers.config import KMS_ALIAS_NAME, REPLICATION_ROLE_NAME
 
 ## DEST KEY
-def dest_kms_key(src_account, bucket_name):
+def dest_kms_key(src_account, bucket_name, multi_region=False):
+    if multi_region:
+        bucket_name = f"{bucket_name}-${{region}}"
     ## creation APIs
     def update_key_condition(
             policy: dict=None,
@@ -95,53 +97,69 @@ def src_kms_key():
     set_policy = ApiCall(
         method = "put_key_policy",
         method_args = {
-            "KeyId": "$src_kms_key/#id/arn",
-            "Policy": "src_kms_key/#id/policy",
+            "KeyId": "$src_kms_key/#id/id",
+            "Policy": "$src_kms_key/#id/policy",
             "PolicyName": "default"
         }
     )
 
     ## Create API
     def append_statements(policy=None):
-        ## update in place
-        pass
+        print(policy)
+        if not policy:
+            return {"policy": None}
+        policy = json.loads(policy)
+        policy["Statement"].append(SOURCE_KMS_POLICY_TEMPLATE)
+        return {"policy": json.dumps(policy)}
     update_policy = Transformer(
         func = append_statements,
-        function_args = {"policy": "$src_kms_key/#id/policy"}
+        function_args = {"policy": "$src_kms_key/#id/policy"},
+        output_keys = ["policy"]
     )
-    
+
 
     ## Describe API
-    def generate_key_arn(id=None, region=None, account=None):
-        return {"arn": f"arn:aws:kms:{region}:{account}:key/{id}"}
-    get_key_arn = Transformer(
-        func = generate_key_arn,
-        function_args = {
-            "id": "$src_kms_key/#id/id",
-            "region": "$region",
-            "account": "$src_account"
-        },
-        output_keys = ["arn"]
-    )
     get_policy = ApiCall(
         method = "get_key_policy",
         method_args = {"KeyId": "$src_kms_key/#id/arn", "PolicyName": "default"},
         output_keys = {"policy": "Policy"}
     )
+    def search_for_sid(policy=None):
+        if policy == "null":
+            return {"arn": None}
+        policy = json.loads(policy)
+        for statement in policy["Statement"]:
+            if "CloudCopyCat" in statement["Sid"]:
+                return {"arn": f"arn:aws:kms:$region:$src_account:key/$src_kms_key/#id/id"}
+        return {"arn": None}
+    validate_policy = Transformer(
+        func = search_for_sid,
+        function_args = {"policy": "$src_kms_key/#id/policy"},
+        output_keys = ["arn"]
+    )
+
 
     ## Delete API
     def remove_statements(policy=None):
-        pass
+        if not policy:
+            return {"policy": None}
+        policy = json.loads(policy)
+        statements = policy["Statement"]
+        for statement in statements:
+            if "Sid" in statement and "CloudCopyCat" in statement["Sid"]:
+                statements.remove(statement)
+        return {"policy": json.dumps(policy)}
     revert_policy = Transformer(
         func = remove_statements,
-        function_args = {"policy": "$src_kms_key/#id/policy"}
+        function_args = {"policy": "$src_kms_key/#id/policy"},
+        output_keys = ["policy"]
     )
 
     kms_resource = ResourceGroup(
         name = "src_kms_key",
         type = "kms",
         create_apis = (update_policy, set_policy),
-        describe_apis = (get_key_arn, get_policy),
+        describe_apis = (get_policy, validate_policy),
         delete_apis = (revert_policy, set_policy)
     )
     return kms_resource
