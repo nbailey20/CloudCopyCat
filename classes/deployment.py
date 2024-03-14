@@ -1,3 +1,4 @@
+import copy
 from classes.Resource import Resource
 from helpers.core import create_session, get_account_id
 
@@ -23,7 +24,8 @@ class Deployment():
     def _aggregate_state(self):
         agg_state = {}
         for region in self.regions:
-            regional_state = self.state[region]
+            ## be careful not to change self.state when aggregating!
+            regional_state = copy.deepcopy(self.state[region])
             for resource_name in regional_state:
                 resource_state = regional_state[resource_name]
                 ## handle regional Resource objects
@@ -63,7 +65,7 @@ class Deployment():
             regional_state["src_account"] = self.state["src_account"]
             regional_state["dest_account"] = self.state["dest_account"]
             regional_state["region"] = region
-            resource.set_state(self.state[region])
+            resource.set_state(regional_state)
 
 
     def _update_state(self, resource: Resource, region: str):
@@ -104,13 +106,12 @@ class Deployment():
 
 
     def _do_action(self, action: str):
-        for idx, region in enumerate(self.regions):
-            ## delete resources in opposite order they were created
-            resource_list = self.resources
-            if action == "delete":
+        resource_list = self.resources
+        if action == "delete":
                 resource_list = self.resources[::-1]
 
-            for resource in resource_list:
+        for resource in resource_list:
+            for idx, region in enumerate(self.regions):
                 ## only create IAM services once globally
                 if idx != 0 and resource.type == "iam":
                     continue
@@ -129,7 +130,7 @@ class Deployment():
 
                 ## perform action and update deployment state afterward
                 action_func = getattr(resource, action)
-                print(f"Performing {resource.name} {action}")
+                print(f"Performing {region} {resource.name} {action}")
                 action_func()
                 self._update_state(resource, region)
 
