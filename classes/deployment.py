@@ -1,5 +1,6 @@
 import copy
 from classes.Resource import Resource
+from helpers.log import logger
 from helpers.core import create_session, get_account_id
 
 
@@ -130,7 +131,7 @@ class Deployment():
 
                 ## perform action and update deployment state afterward
                 action_func = getattr(resource, action)
-                print(f"Performing {region} {resource.name} {action}")
+                logger.info(f"Performing {region} {resource.name} {action}")
                 action_func()
                 self._update_state(resource, region)
 
@@ -173,6 +174,8 @@ class Deployment():
                 "dest_account": get_account_id(self.dest_profile)
             }
         for region in self.regions:
+            if not region in self.state:
+                self.state[region] = {"region": region}
             for resource in self.resources:
                 empty_state = {"arn": None, "type": resource.type}
                 if resource.name in self.num_resources:

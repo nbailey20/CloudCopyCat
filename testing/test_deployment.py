@@ -15,7 +15,7 @@ def test_no_resources():
     out = d.state
     if len(out.keys()) != 4:
         return False
-    if not "us-east-1" in out or not "iam" in out:
+    if not "iam" in out or not "us-east-1" in out:
         return False
     if not "src_account" in out or not "dest_account" in out:
         return False

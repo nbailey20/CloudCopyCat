@@ -2,6 +2,7 @@
 
 import zipfile, os
 
+from helpers.log import logger, LOGGER_DEBUG, LOGGER_INFO
 from helpers.arguments.parse import parse_args
 from helpers.arguments.validate import args_are_valid
 import helpers.resource_handler as resource_handler
@@ -17,7 +18,15 @@ def build_zips():
 
 def main():
     args = parse_args()
+    if args.debug:
+        logger.setLevel(LOGGER_DEBUG)
+        logger.debug("Verbose flag provided, printing debug logs")
+        logger.debug(f"Received command-line args: {args}")
+    else:
+        logger.setLevel(LOGGER_INFO)
+
     if not args_are_valid(args):
+        logger.error("Provided arguments are not valid, run again with -v for more details")
         return
     
     # print("Building Lambda zips...")

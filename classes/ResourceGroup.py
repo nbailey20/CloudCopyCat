@@ -1,12 +1,12 @@
 from classes.ApiCall import ApiCall
 from classes.Resource import Resource
+from helpers.log import logger
 
 
 ## Stores multiple Resource states as list under a single Resource name
 class ResourceGroup(Resource):
     def _update_state(self, api_output: dict[str]):
         if not api_output:
-            #  print("No output returned from API")
             return
         ## include resource type in state
         api_output.update({"type": self.type})
@@ -15,7 +15,7 @@ class ResourceGroup(Resource):
         elif len(self.state[self.name]) > self.id:
             self.state[self.name][self.id].update(api_output)
         else:
-            print("ResourceGroup state contains unexpected number of items in list")
+            logger.debug("ResourceGroup state contains unexpected number of items in list")
 
     def _check_if_exists(self):
         ## if we don't have enough resources yet, must not exist

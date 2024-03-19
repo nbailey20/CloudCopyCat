@@ -1,12 +1,12 @@
 import re
 import json
 from classes.ApiCall import ApiCall
+from helpers.log import logger
 from helpers.core import get_value_from_expression
 
 class Resource():
     def _update_state(self, api_output: dict[str]):
         if not api_output:
-          #  print("No output returned from API")
             return
         self.state[self.name].update(api_output)
 
@@ -79,14 +79,20 @@ class Resource():
             apis = self.delete_apis
 
         for api in apis:
+            api.exception = None
+
+            ## Evaluate any conditional APIs
+            if hasattr(api, "expression_func"):
+                api.eval_expression(self._render_method_args(api.expression_args))
+
             rendered_args = self._render_method_args(api.method_args)
             rendered_outputs = self._render_method_args(api.expected_output)
             api.set_client(self.client)
             api.execute(args=rendered_args, outputs=rendered_outputs)
             if api.exception:
-                print(f"Received exception while executing ApiCall: {api.exception}")
+                logger.debug(f"Received exception while executing ApiCall: {api.exception}")
                 if api_type == "create":
-                    print("Cleaning up Resource")
+                    logger.info("Could not fully create Resource, cleaning up before retry")
                     self.delete()
                     break
             self._update_state(api.output)
@@ -115,9 +121,9 @@ class Resource():
             elif type(self.state[dep]) == list:
                 dep_test = all([r["arn"] for r in self.state[dep]])
             else:
-                print(f"Unexpected type for self.dependencies: {type(self.state[dep])}")
+                logger.debug(f"Unexpected type for self.dependencies: {type(self.state[dep])}")
             if not dep_test:
-                print(f"Prerequisite resource {dep} not found")
+                logger.info(f"Prerequisite resource {dep} not found")
                 return False
         return True
 
@@ -128,14 +134,14 @@ class Resource():
 
     def create(self):
         if not self._check_dependencies():
-            print(f"Not all dependencies met for {self.name}, skipping creation")
+            logger.info(f"Not all dependencies met for {self.name}, skipping creation")
             return
         self._invoke_apis(api_type="describe")
         if not self._check_if_exists():
-            print(f"No existing resource found, creating {self.name}")
+            logger.info(f"Creating {self.name}, no existing resource found")
             self._invoke_apis(api_type="create")
         else:
-            print(f"Resource {self.name} already exists, skipping creation")
+            logger.info(f"Resource {self.name} already exists, skipping creation")
 
     def describe(self):
         self._invoke_apis(api_type="describe")
@@ -147,9 +153,9 @@ class Resource():
             ## delete doesn't update state, call describe after deletion
             self._invoke_apis(api_type="describe")
             if not self._check_if_exists():
-                print(f"Successfully deleted {self.name}")
+                logger.info(f"Successfully deleted Resource {self.name}")
         else:
-            print("Resource ARN is null, nothing to clean up")
+            logger.info(f"Resource {self.name} does not exist, nothing to clean up")
 
 
     def __init__(

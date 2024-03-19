@@ -1,4 +1,5 @@
 import boto3
+from helpers.log import logger
 
 
 def create_session(profile_name, region="us-east-1"):
@@ -105,7 +106,7 @@ def get_value_from_expression(dict_obj: dict, expression: str):
         filter_key, filter_value = expression[1].split("~")
         filtered_res = None
         for obj in dict_obj:
-            if filter_value in obj[filter_key]:
+            if filter_key in obj and filter_value in obj[filter_key]:
                 filtered_res = obj
         if len(expression) < 3:
             return filtered_res
@@ -119,7 +120,7 @@ def get_value_from_expression(dict_obj: dict, expression: str):
             try:
                 list_idx = int(next_key[1:])
             except ValueError:
-                print(f"Could not handle expression term {next_key}")
+                logger.debug(f"Could not handle expression term {next_key}")
                 return None
             return get_value_from_expression(dict_obj[list_idx], expression[1:])
 
@@ -127,8 +128,8 @@ def get_value_from_expression(dict_obj: dict, expression: str):
     try:
         return get_value_from_expression(dict_obj[next_key], expression[1:])
     except KeyError:
-        print(f"Could not find key {next_key} in object")
+        logger.debug(f"Could not find key {next_key} in object: {dict_obj.keys()}")
         return None
     except TypeError:
-        print(f"Unknown error with key {next_key} in object")
+        logger.debug(f"Unknown type error with key {next_key} in object")
         return None

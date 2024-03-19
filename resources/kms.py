@@ -105,7 +105,6 @@ def src_kms_key():
 
     ## Create API
     def append_statements(policy=None):
-        print(policy)
         if not policy:
             return {"policy": None}
         policy = json.loads(policy)
@@ -129,7 +128,7 @@ def src_kms_key():
             return {"arn": None}
         policy = json.loads(policy)
         for statement in policy["Statement"]:
-            if "CloudCopyCat" in statement["Sid"]:
+            if "Sid" in statement and "CloudCopyCat" in statement["Sid"]:
                 return {"arn": f"arn:aws:kms:$region:$src_account:key/$src_kms_key/#id/id"}
         return {"arn": None}
     validate_policy = Transformer(

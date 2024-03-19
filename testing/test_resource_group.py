@@ -63,7 +63,7 @@ def test_multiple_resources(client, type):
                 client,
                 method = "get_topic_attributes",
                 method_args = {"TopicArn": f"${resource_name}/#id/arn"},
-                output_keys = {"arn": "TopicArn"}
+                output_keys = {"arn": "Attributes/TopicArn"}
             )
     delete_topic = ApiCall(
                         client,

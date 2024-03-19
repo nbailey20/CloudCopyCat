@@ -13,29 +13,30 @@ from resources.batch_replication import src_batch_replication
 
 from helpers.core import create_session, get_account_id, get_src_state, add_ssm_params_to_state
 from helpers.dependencies import RESOURCE_DEPENDENCIES
+from helpers.log import logger
 
 
 
 """
-Function to create all AWS resources needed by CloudCopyCat,
+Function to manage all AWS resources needed by CloudCopyCat,
 in both source and destination accounts
 
 Source account actions performed:
     - Get list of all buckets to copy data from
     - Update bucket policies to allow Batch Copy IAM role to get objects
-    - Enable bucket versioning if not already - determine how to copy objects with null versionID
-    - Update KMS key (policy) encrypting bucket to allow Batch Copy IAM role decryption
-    - Create Inventory Report configurations on buckets, sent to destination bucket
+    - Enable bucket versioning if not already
+    - Update all KMS key policies encrypting buckets to allow Batch Copy IAM role decryption
+    - Create Batch Replication jobs for each buckets to generate manifest of objects to copy
 
-Destination account actions performed:
+Destination account actions performed in each region (except IAM):
     - Create KMS CMK for encrypting all data at rest
     - Create SNS topic for email notifications regarding status
     - Create S3 bucket where copied objects will be stored
     - Create Lambda state file in S3 bucket
-    - Create IAM roles for Batch Copy actions and Lambda
+    - Create IAM roles for Batch Copy, Replication actions and Lambda
     - Create SSM parameters to hold values required by Lambda (instead of env vars)
-    - Create Lambda to track completion state
-    - Create EB rule to trigger Lambda when Inventory Report manifest is uploaded to destination bucket
+    - Create Lambda to track completion state and trigger Batch Copy jobs
+    - Create EB rule to trigger Lambda when Batch Replication manifest is uploaded to destination bucket
 """
 
 
@@ -51,7 +52,7 @@ def run(args):
     src_session = create_session(args.src_profile, region="us-east-1")
     state, regions = get_src_state(src_session, region_filter)
     if not state:
-        print("No source buckets to copy data from, exiting.")
+        logger.info("No source buckets to copy data from, exiting.")
         return
     multi_region = False
     if len(regions) > 1:
@@ -74,11 +75,11 @@ def run(args):
         src_replication_policy(),
         dest_sns_topic(args.email),
         dest_ssm_param(),
-        # dest_lambda_function(dest_account_id),
-        # dest_eventbridge_rule(),
-        # src_kms_key(),
-        # src_bucket(),
-       # src_batch_replication(args.force)
+        dest_lambda_function(dest_account_id),
+        dest_eventbridge_rule(),
+        src_kms_key(),
+        src_bucket(),
+        src_batch_replication(args.force)
     ]
 
     ## Declare number of resources for each ResourceGroup
@@ -107,8 +108,8 @@ def run(args):
     )
 
     if args.remove:
-        print("Removing deployment")
+        logger.info("Removing deployment")
         cloudcopycat.delete()
     else:
-        print("Creating new deployment")
+        logger.info("Creating new deployment")
         cloudcopycat.create()

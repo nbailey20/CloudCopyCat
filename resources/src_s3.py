@@ -1,6 +1,7 @@
 import json
 from classes.ApiCall import ApiCall
 from classes.Transformer import Transformer
+from classes.ConditionalApiCall import ConditionalApiCall
 from classes.ResourceGroup import ResourceGroup
 
 from helpers.config import REPLICATION_ROLE_NAME
@@ -39,10 +40,10 @@ def src_bucket():
     def append_statements(policy=None):
         if policy == "null":
             return {"policy": EMPTY_BUCKET_POLICY_TEMPLATE}
-       # policy = json.loads(policy)
+        policy = json.loads(policy)
         statements = policy["Statement"]
         statements.append(SOURCE_BUCKET_POLICY_TEMPLATE)
-        return {"policy": json.dumps(SOURCE_BUCKET_POLICY_TEMPLATE)}
+        return {"policy": json.dumps(policy)}
     update_policy = Transformer(
         func = append_statements,
         function_args = {"policy": "$src_bucket/#id/policy"},
@@ -128,13 +129,34 @@ def src_bucket():
         for statement in statements:
             if "Sid" in statement and "CloudCopyCat" in statement["Sid"]:
                 statements.remove(statement)
-        if len(statements) == 0:
-            print("Bucket policy created by CloudCopyCat, leaving intact")
         return {"policy": json.dumps(policy)}
     revert_policy = Transformer(
         func = remove_statements,
         function_args = {"policy": "$src_bucket/#id/policy"},
         output_keys = ["policy"]
+    )
+
+    def test_statement_len(policy=None):
+        if not policy:
+            return
+        policy = json.loads(policy)
+        if not len(policy["Statement"]):
+            return 1
+        return 0
+    set_or_remove_policy = ConditionalApiCall(
+        method_options = ["put_bucket_policy", "delete_bucket_policy"],
+        method_arg_options = [
+            {
+                "Bucket": "$src_bucket/#id/name",
+                "Policy": "$src_bucket/#id/policy"
+            },
+            {
+                "Bucket": "$src_bucket/#id/name"
+            }
+        ],
+        output_key_options = [{}, {}],
+        expression_func = test_statement_len,
+        expression_args = {"policy": "$src_bucket/#id/policy"}
     )
 
 
@@ -150,6 +172,6 @@ def src_bucket():
             get_bucket_arn
         ),
         describe_apis = (get_policy, validate_policy),
-        delete_apis = (revert_policy, set_policy)
+        delete_apis = (revert_policy, set_or_remove_policy)
     )
     return bucket_group
