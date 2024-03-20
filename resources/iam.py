@@ -84,47 +84,47 @@ def create_policy(resource_name, policy_name, policy_document, role_name):
 
 
 
-def dest_lambda_role():
+def dest_lambda_role(suffix):
     return create_role(
         "dest_lambda_role", 
-        LAMBDA_ROLE_NAME,
+        f"{LAMBDA_ROLE_NAME}-{suffix}",
         LAMBDA_TRUST_POLICY
         )
 
-def dest_copy_role():
+def dest_copy_role(suffix):
     return create_role(
         "dest_copy_role",
-        BATCH_COPY_ROLE_NAME,
+        f"{BATCH_COPY_ROLE_NAME}-{suffix}",
         BATCH_COPY_TRUST_POLICY
     )
 
-def src_replication_role():
+def src_replication_role(suffix):
     return create_role(
         "src_replication_role",
-        REPLICATION_ROLE_NAME,
+        f"{REPLICATION_ROLE_NAME}-{suffix}",
         REPLICATION_TRUST_POLICY
     )
 
-def dest_lambda_policy():
+def dest_lambda_policy(suffix):
     return create_policy(
         "dest_lambda_policy",
-        LAMBDA_POLICY_NAME,
+        f"{LAMBDA_POLICY_NAME}-{suffix}",
         LAMBDA_IAM_POLICY_TEMPLATE,
-        LAMBDA_ROLE_NAME
+        f"{LAMBDA_ROLE_NAME}-{suffix}"
     )
 
-def dest_copy_policy():
+def dest_copy_policy(suffix):
     return create_policy(
         "dest_copy_policy",
-        BATCH_COPY_POLICY_NAME,
+        f"{BATCH_COPY_POLICY_NAME}-{suffix}",
         BATCH_COPY_IAM_POLICY_TEMPLATE,
-        BATCH_COPY_ROLE_NAME
+        f"{BATCH_COPY_ROLE_NAME}-{suffix}"
     )
 
-def src_replication_policy():
+def src_replication_policy(suffix):
     return create_policy(
         "src_replication_policy",
-        REPLICATION_POLICY_NAME,
+        f"{REPLICATION_POLICY_NAME}-{suffix}",
         REPLICATION_IAM_POLICY_TEMPLATE,
-        REPLICATION_ROLE_NAME
+        f"{REPLICATION_ROLE_NAME}-{suffix}"
     )

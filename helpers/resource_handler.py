@@ -12,9 +12,9 @@ from resources.src_s3 import src_bucket
 from resources.batch_replication import src_batch_replication
 
 from helpers.core import create_session, get_account_id, get_src_state, add_ssm_params_to_state
+from helpers.checksum import generate_resource_suffix
 from helpers.dependencies import RESOURCE_DEPENDENCIES
 from helpers.log import logger
-
 
 
 """
@@ -54,32 +54,41 @@ def run(args):
     if not state:
         logger.info("No source buckets to copy data from, exiting.")
         return
-    multi_region = False
+
+    ## generate dest bucket name from cli input, regions, checksum suffix to ensure unique
+    dest_bucket_prefix = args.dest_bucket
     if len(regions) > 1:
-        multi_region = True
-    
-    param_data = get_param_data(src_account_id, dest_account_id)
+        dest_bucket_prefix = f"{dest_bucket_prefix}-${{region}}"
+    resource_suffix = generate_resource_suffix(
+                            args.region,
+                            dest_bucket_prefix,
+                            src_account_id,
+                            dest_account_id
+                        )
+    dest_bucket_name = f"{dest_bucket_prefix}-{resource_suffix}"
+
+    param_data = get_param_data(src_account_id, dest_account_id, resource_suffix)
     add_ssm_params_to_state(state, param_data)
     state["src_account"] = src_account_id
     state["dest_account"] = dest_account_id
     state["iam"] = {}
 
     aws_resources = [
-        dest_kms_key(src_account_id, args.dest_bucket, multi_region),
-        dest_bucket(args.dest_bucket, multi_region),
-        dest_copy_role(),
-        dest_copy_policy(),
-        dest_lambda_role(),
-        dest_lambda_policy(),
-        src_replication_role(),
-        src_replication_policy(),
-        dest_sns_topic(args.email),
+        dest_kms_key(src_account_id, dest_bucket_name),
+        dest_bucket(dest_bucket_name),
+        dest_copy_role(resource_suffix),
+        dest_copy_policy(resource_suffix),
+        dest_lambda_role(resource_suffix),
+        dest_lambda_policy(resource_suffix),
+        src_replication_role(resource_suffix),
+        src_replication_policy(resource_suffix),
+        dest_sns_topic(args.email, resource_suffix),
         dest_ssm_param(),
-        dest_lambda_function(dest_account_id),
-        dest_eventbridge_rule(),
+        dest_lambda_function(dest_account_id, resource_suffix),
+        dest_eventbridge_rule(resource_suffix),
         src_kms_key(),
-        src_bucket(),
-        src_batch_replication(args.force)
+        src_bucket(resource_suffix),
+        src_batch_replication(resource_suffix, args.force)
     ]
 
     ## Declare number of resources for each ResourceGroup

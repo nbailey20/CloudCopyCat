@@ -3,12 +3,14 @@ from classes.Resource import Resource
 from helpers.config import SNS_TOPIC_NAME
 
 
-def dest_sns_topic(email_address):
+def dest_sns_topic(email_address, suffix):
+    topic_name = f"{SNS_TOPIC_NAME}-{suffix}"
+
     ## Creation API
     create_topic = ApiCall(
         method = "create_topic",
         method_args = {
-            "Name": SNS_TOPIC_NAME,
+            "Name": topic_name,
             "Attributes": {
                  "KmsMasterKeyId": "$dest_kms_key/arn"
             }
@@ -27,7 +29,7 @@ def dest_sns_topic(email_address):
     ## Describe API
     describe_topic = ApiCall(
         method = "list_topics",
-        output_keys = {"arn": f"Topics/?/TopicArn~{SNS_TOPIC_NAME}/TopicArn"}
+        output_keys = {"arn": f"Topics/?/TopicArn~{topic_name}/TopicArn"}
     )
 
     ## Delete API

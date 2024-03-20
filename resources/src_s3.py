@@ -8,7 +8,9 @@ from helpers.config import REPLICATION_ROLE_NAME
 from configs.s3.source_bucket import SOURCE_BUCKET_POLICY_TEMPLATE, EMPTY_BUCKET_POLICY_TEMPLATE
 
 ## SOURCE BUCKET
-def src_bucket():
+def src_bucket(suffix):
+    replication_name = f"{REPLICATION_ROLE_NAME}-{suffix}"
+
     def generate_bucket_arn(name=None):
         if name == "null":
             return {"arn": None}
@@ -63,7 +65,7 @@ def src_bucket():
         method_args = {
             "Bucket": "$src_bucket/#id/name",
             "ReplicationConfiguration": {
-                "Role": f"arn:aws:iam::$src_account:role/{REPLICATION_ROLE_NAME}",
+                "Role": f"arn:aws:iam::$src_account:role/{replication_name}",
                 "Rules": [
                     {
                         "ID": "CloudCopyCatReplication",

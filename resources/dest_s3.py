@@ -8,10 +8,7 @@ from helpers.config import REPLICATION_ROLE_NAME
 
 
 ## DEST BUCKET
-def dest_bucket(bucket_name, multi_region=False):
-    if multi_region:
-        bucket_name = f"{bucket_name}-${{region}}"
-
+def dest_bucket(bucket_name):
     def generate_bucket_arn(name=None):
         if name == None or name == "null":
             return {"arn": None}

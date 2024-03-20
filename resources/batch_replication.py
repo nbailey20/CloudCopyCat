@@ -4,7 +4,9 @@ from classes.Transformer import Transformer
 from classes.ResourceGroup import ResourceGroup
 
 
-def src_batch_replication(force=False):
+def src_batch_replication(suffix, force=False):
+    job_description = "CloudCopyCat-${src_bucket/#id/name}-Replication-Job-" + suffix
+
     ## Creation API
     def sleep_for_20():
         print("Sleeping for 20 to let Lambda function / EventBridge rule fully create")
@@ -23,7 +25,7 @@ def src_batch_replication(force=False):
             "Report": {
                 "Enabled": False
             },
-            "Description": "CloudCopyCat-${src_bucket/#id/name}-Replication-Job",
+            "Description": job_description,
             "Priority": 10,
             "RoleArn": "$src_replication_role/arn",
             "ManifestGenerator": {
@@ -60,7 +62,7 @@ def src_batch_replication(force=False):
         },
         ## jobs don't have ARNs, but pretend a JobId is an ARN
         output_keys = {
-            "arn": "Jobs/?/Description~CloudCopyCat/JobId" ## TODO make this more specific
+            "arn": f"Jobs/?/Description~{job_description}/JobId"
         }
     )
     def ignore_if_forced(forced=None):

@@ -5,21 +5,22 @@ from helpers.config import LAMBDA_STATE_FOLDER, LAMBDA_STATE_FILE_NAME
 from helpers.config import BATCH_COPY_ROLE_NAME
 
 
-def get_param_data(src_account, dest_account):
+def get_param_data(src_account, dest_account, suffix):
+    batch_name = f"{BATCH_COPY_ROLE_NAME}-{suffix}"
     return [
         {
-            "name": "CloudCopyCat-Source-Account-ID",
+            "name": f"CloudCopyCat-Source-Account-ID-{suffix}",
             "value": src_account,
             "type": "ssm"
         },
         {
-            "name": "CloudCopyCat-State-File-Path",
+            "name": f"CloudCopyCat-State-File-Path-{suffix}",
             "value": f"{LAMBDA_STATE_FOLDER}/{LAMBDA_STATE_FILE_NAME}",
             "type": "ssm"
         },
         {
-            "name": "CloudCopyCat-Batch-Copy-Role-Arn",
-            "value": f"arn:aws:iam::{dest_account}:role/{BATCH_COPY_ROLE_NAME}",
+            "name": f"CloudCopyCat-Batch-Copy-Role-Arn-{suffix}",
+            "value": f"arn:aws:iam::{dest_account}:role/{batch_name}",
             "type": "ssm"
         }
     ]

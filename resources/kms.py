@@ -8,9 +8,7 @@ from configs.kms.dest_key import DEST_KMS_POLICY_TEMPLATE
 from helpers.config import KMS_ALIAS_NAME, REPLICATION_ROLE_NAME
 
 ## DEST KEY
-def dest_kms_key(src_account, bucket_name, multi_region=False):
-    if multi_region:
-        bucket_name = f"{bucket_name}-${{region}}"
+def dest_kms_key(src_account, bucket_name):
     ## creation APIs
     def update_key_condition(
             policy: dict=None,

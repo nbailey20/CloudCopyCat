@@ -6,7 +6,10 @@ from helpers.config import LAMBDA_RUNTIME, LAMBDA_FUNCTION_NAME, LAMBDA_STATE_FO
 from helpers.config import EVENTBRIDGE_RULE_NAME
 
 
-def dest_lambda_function(dest_account):
+def dest_lambda_function(dest_account, suffix):
+    lambda_name = f"{LAMBDA_FUNCTION_NAME}-{suffix}"
+    eb_name = f"{EVENTBRIDGE_RULE_NAME}-{suffix}"
+
     ## Create APIs
     def sleep_for_15():
         print("Sleeping for 15 to let Lambda role fully create")
@@ -17,13 +20,13 @@ def dest_lambda_function(dest_account):
     create_function = ApiCall(
         method = "create_function",
         method_args = {
-            "FunctionName": LAMBDA_FUNCTION_NAME,
+            "FunctionName": lambda_name,
             "Runtime": LAMBDA_RUNTIME,
             "Role": "$dest_lambda_role/arn",
-            "Handler": f"{LAMBDA_FUNCTION_NAME}.lambda_handler",
+            "Handler": f"{lambda_name}.lambda_handler",
             "Code": {
                 "S3Bucket": "$dest_bucket/name",
-                "S3Key": f"{LAMBDA_STATE_FOLDER}/{LAMBDA_FUNCTION_NAME}"
+                "S3Key": f"{LAMBDA_STATE_FOLDER}/{lambda_name}"
             },
             "Timeout": 120
         },
@@ -32,11 +35,11 @@ def dest_lambda_function(dest_account):
     add_permission = ApiCall(
         method = "add_permission",
         method_args = {
-            "FunctionName": LAMBDA_FUNCTION_NAME,
+            "FunctionName": lambda_name,
             "StatementId": "CloudCopyCat-EventBridgeInvokePermission",
             "Action": "lambda:InvokeFunction",
             "Principal": "events.amazonaws.com",
-            "SourceArn": f"arn:aws:events:$region:{dest_account}:rule/{EVENTBRIDGE_RULE_NAME}",
+            "SourceArn": f"arn:aws:events:$region:{dest_account}:rule/{eb_name}",
             "SourceAccount": dest_account
         }
     )
@@ -45,14 +48,14 @@ def dest_lambda_function(dest_account):
     describe_function = ApiCall(
         method = "list_functions",
         output_keys = {
-            "arn": f"Functions/?/FunctionName~{LAMBDA_FUNCTION_NAME}/FunctionArn"
+            "arn": f"Functions/?/FunctionName~{lambda_name}/FunctionArn"
         }
     )
 
     ## Delete API
     delete_function = ApiCall(
         method = "delete_function",
-        method_args = {"FunctionName": LAMBDA_FUNCTION_NAME}
+        method_args = {"FunctionName": lambda_name}
     )
 
     function_resource = Resource(

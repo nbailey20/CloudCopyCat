@@ -5,7 +5,9 @@ from helpers.log import logger
 def create_session(profile_name, region="us-east-1"):
     if region == "*":
         region = "us-east-1"
-    return boto3.Session(profile_name=profile_name, region_name=region)
+    session = boto3.Session(profile_name=profile_name, region_name=region)
+    logger.debug(f"Created boto3 session with profile {profile_name} and region {region}")
+    return session
 
 def get_account_id(profile_name):
     if not profile_name:
@@ -21,7 +23,7 @@ def get_account_id(profile_name):
 def get_src_state(session, region_filter=None):
     client = session.client("s3")
     bucket_names = [b["Name"] for b in client.list_buckets()["Buckets"]]
-    
+
     state = {}
     regions = []
     keys_seen = []
@@ -42,6 +44,7 @@ def get_src_state(session, region_filter=None):
         if region_filter and region_filter != bucket_region:
             continue
 
+        logger.debug(f"Gathering information for source bucket {bucket_name}")
         bucket_data = {
             "name": bucket_name,
             "arn": f"arn:aws:s3:::{bucket_name}",
